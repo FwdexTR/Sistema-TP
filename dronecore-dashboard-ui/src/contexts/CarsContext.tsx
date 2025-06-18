@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface Car {
@@ -29,24 +28,7 @@ export const useCars = () => {
 };
 
 export const CarsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cars, setCars] = useState<Car[]>([
-    {
-      id: '1',
-      model: 'Toyota Hilux',
-      plate: 'ABC-1234',
-      year: 2022,
-      status: 'available',
-      createdAt: '2024-01-01'
-    },
-    {
-      id: '2',
-      model: 'Ford Ranger',
-      plate: 'DEF-5678',
-      year: 2023,
-      status: 'available',
-      createdAt: '2024-01-01'
-    }
-  ]);
+  const [cars, setCars] = useState<Car[]>([]);
 
   useEffect(() => {
     const savedCars = localStorage.getItem('tpdrones_cars');

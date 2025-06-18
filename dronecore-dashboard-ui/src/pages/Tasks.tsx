@@ -58,53 +58,7 @@ const Tasks: React.FC = () => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedClient, setSelectedClient] = useState<string>('');
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Inspeção de Torres de Transmissão',
-      description: 'Inspeção visual das torres de transmissão na região norte',
-      assignee: 'João Silva',
-      status: 'in-progress',
-      priority: 'high',
-      dueDate: '2024-01-15',
-      location: 'Setor Norte',
-      hectares: 100,
-      client: 'Empresa A',
-      createdAt: '2024-01-10',
-      completedHectares: 50,
-      googleMapsLink: '',
-      kmlFile: '',
-      drone: '',
-      car: '',
-      serviceValue: 25000,
-      progressEntries: [{
-        date: '2024-01-14T10:00:00Z',
-        hectares: 50,
-        photos: [],
-        notes: 'Primeira fase concluída',
-        assignee: 'João Silva'
-      }]
-    },
-    {
-      id: '2',
-      title: 'Mapeamento Agrícola',
-      description: 'Mapeamento de área cultivada para análise de produtividade',
-      assignee: 'Maria Santos',
-      status: 'pending',
-      priority: 'medium',
-      dueDate: '2024-01-18',
-      location: 'Fazenda São João',
-      hectares: 25.0,
-      client: 'Fazenda São João',
-      createdAt: '2024-01-10',
-      completedHectares: 0,
-      googleMapsLink: '',
-      kmlFile: '',
-      drone: '',
-      car: '',
-      serviceValue: 6250
-    }
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   // Load tasks from localStorage on component mount
   useEffect(() => {
@@ -120,12 +74,7 @@ const Tasks: React.FC = () => {
   }, [tasks]);
 
   // Get users from localStorage to include newly created users
-  const [registeredUsers, setRegisteredUsers] = useState<User[]>([
-    { id: '1', name: 'João Silva', email: 'joao@tpdrones.com', role: 'employee' },
-    { id: '2', name: 'Maria Santos', email: 'maria@tpdrones.com', role: 'employee' },
-    { id: '3', name: 'Carlos Oliveira', email: 'carlos@tpdrones.com', role: 'employee' },
-    { id: '4', name: 'Ana Costa', email: 'ana@tpdrones.com', role: 'employee' }
-  ]);
+  const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
 
   // Load users from localStorage on component mount
   useEffect(() => {
@@ -143,13 +92,7 @@ const Tasks: React.FC = () => {
   }, []);
 
   // Get clients from localStorage to include newly created clients
-  const [clients, setClients] = useState([
-    { id: '1', name: 'Empresa A', email: 'contato@empresaa.com' },
-    { id: '2', name: 'Fazenda São João', email: 'contato@fazenda.com' },
-    { id: '3', name: 'Distrito Industrial', email: 'contato@distrito.com' },
-    { id: '4', name: 'Cooperativa ABC', email: 'contato@coop.com' },
-    { id: '5', name: 'Indústria XYZ', email: 'contato@industria.com' }
-  ]);
+  const [clients, setClients] = useState([]);
 
   useEffect(() => {
     const savedClients = localStorage.getItem('tpdrones_clients');
@@ -243,9 +186,7 @@ const Tasks: React.FC = () => {
       const updatedTask: Task = { 
         ...selectedTask, 
         ...taskData,
-        createdAt: selectedTask.createdAt,
-        drone: taskData.drone || '',
-        car: taskData.car || ''
+        createdAt: selectedTask.createdAt
       };
       setTasks(prev => prev.map(task => 
         task.id === selectedTask.id ? updatedTask : task
@@ -259,8 +200,6 @@ const Tasks: React.FC = () => {
         completedHectares: 0,
         progressEntries: [],
         createdAt: new Date().toISOString().split('T')[0],
-        drone: taskData.drone || '',
-        car: taskData.car || '',
         ...taskData
       };
       setTasks(prev => [...prev, newTask]);

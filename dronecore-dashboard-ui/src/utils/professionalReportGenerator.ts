@@ -96,7 +96,7 @@ export const generateEmployeePaymentReport = async (employee: Employee, tasks: T
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(10);
   pdf.text('SERVIÇO', 25, 97);
-  pdf.text('CLIENTE', 80, 97);
+  pdf.text('', 80, 97);
   pdf.text('HECTARES', 130, 97);
   pdf.text('VALOR', 160, 97);
   

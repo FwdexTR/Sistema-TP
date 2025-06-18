@@ -46,15 +46,6 @@ const Login: React.FC = () => {
           <p className="text-gray-600 mt-2">Faça login para acessar o sistema</p>
         </div>
 
-        {/* Demo Users Info */}
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">Usuários de demonstração:</h3>
-          <div className="text-xs text-blue-700 space-y-1">
-            <p><strong>Admin:</strong> admin@dronecore.com / admin123</p>
-            <p><strong>Funcionário:</strong> joao@dronecore.com / emp123</p>
-          </div>
-        </div>
-
         {/* Error Message */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import { Plus, Edit, Trash2, Battery, Wifi, AlertTriangle } from 'lucide-react';
@@ -19,38 +18,7 @@ interface Drone {
 }
 
 const DronesPage: React.FC = () => {
-  const [drones, setDrones] = useState<Drone[]>([
-    {
-      id: 'DRN-001',
-      model: 'DJI Mavic 3',
-      serialNumber: 'DJI001234',
-      status: 'available',
-      batteryLevel: 85,
-      flightHours: 120.5,
-      lastMaintenance: '2024-01-01',
-      nextMaintenance: '2024-04-01'
-    },
-    {
-      id: 'DRN-002',
-      model: 'DJI Phantom 4',
-      serialNumber: 'DJI005678',
-      status: 'in-use',
-      batteryLevel: 65,
-      flightHours: 95.2,
-      lastMaintenance: '2023-12-15',
-      nextMaintenance: '2024-03-15'
-    },
-    {
-      id: 'DRN-003',
-      model: 'DJI Mini 3',
-      serialNumber: 'DJI009876',
-      status: 'maintenance',
-      batteryLevel: 0,
-      flightHours: 200.8,
-      lastMaintenance: '2024-01-10',
-      nextMaintenance: '2024-01-20'
-    }
-  ]);
+  const [drones, setDrones] = useState<Drone[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDrone, setSelectedDrone] = useState<Drone | null>(null);

@@ -34,56 +34,7 @@ const Clients: React.FC = () => {
     address: ''
   });
 
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: '1',
-      name: 'Roberto Silva',
-      company: 'Agro Tech Ltd',
-      email: 'roberto@agrotech.com',
-      phone: '+55 11 99999-1234',
-      address: 'São Paulo, SP',
-      status: 'active',
-      totalMissions: 15,
-      lastMission: '2024-01-10',
-      createdAt: '2024-01-01'
-    },
-    {
-      id: '2',
-      name: 'Ana Costa',
-      company: 'Urban Survey',
-      email: 'ana@urbansurvey.com',
-      phone: '+55 11 88888-5678',
-      address: 'Rio de Janeiro, RJ',
-      status: 'active',
-      totalMissions: 8,
-      lastMission: '2024-01-12',
-      createdAt: '2024-01-02'
-    },
-    {
-      id: '3',
-      name: 'Carlos Mendes',
-      company: 'Mining Corp',
-      email: 'carlos@mining.com',
-      phone: '+55 11 77777-9012',
-      address: 'Belo Horizonte, MG',
-      status: 'inactive',
-      totalMissions: 23,
-      lastMission: '2023-12-15',
-      createdAt: '2023-12-01'
-    },
-    {
-      id: '4',
-      name: 'Mariana Santos',
-      company: 'EcoMonitor',
-      email: 'mariana@ecomonitor.com',
-      phone: '+55 11 66666-3456',
-      address: 'Curitiba, PR',
-      status: 'active',
-      totalMissions: 12,
-      lastMission: '2024-01-08',
-      createdAt: '2024-01-03'
-    }
-  ]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   // Load and save clients to localStorage
   useEffect(() => {

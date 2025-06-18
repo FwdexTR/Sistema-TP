@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
@@ -42,8 +41,8 @@ const ProgressiveTaskExecution: React.FC<ProgressiveTaskExecutionProps> = ({
       const droneList = JSON.parse(savedDrones);
       setDrones(droneList.map((drone: any) => drone.model || drone.name || drone));
     } else {
-      // Fallback to default drones
-      setDrones(['DRN-001', 'DRN-002', 'DRN-003', 'DRN-004', 'DRN-005']);
+      // No drones available
+      setDrones([]);
     }
   }, []);
 

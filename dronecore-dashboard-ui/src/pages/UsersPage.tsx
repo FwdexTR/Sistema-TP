@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { Plus, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
@@ -17,24 +16,7 @@ interface User {
 }
 
 const UsersPage: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@tpdrones.com',
-      role: 'admin',
-      active: true,
-      createdAt: '2024-01-01'
-    },
-    {
-      id: '2',
-      name: 'João Silva',
-      email: 'joao@tpdrones.com',
-      role: 'employee',
-      active: true,
-      createdAt: '2024-01-05'
-    }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);

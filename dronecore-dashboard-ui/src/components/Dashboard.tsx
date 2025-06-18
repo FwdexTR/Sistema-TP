@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Calendar, Users, FileText, DollarSign, Car, Wifi, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Task {
   id: string;
@@ -131,9 +131,25 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2 font-title">Dashboard</h2>
-        <p className="text-gray-600">Visão geral das operações da TpDrones</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 font-title">Dashboard</h2>
+          <p className="text-gray-600">Visão geral das operações da TpDrones</p>
+        </div>
+        {typeof window !== 'undefined' && users.some(u => u.role === 'admin') && (
+          <Button
+            variant="outline"
+            className="text-red-600"
+            onClick={() => {
+              if (window.confirm('Tem certeza que deseja limpar TODOS os dados do sistema? Esta ação não pode ser desfeita.')) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+          >
+            Limpar Dados
+          </Button>
+        )}
       </div>
 
       {/* Main Stats Grid */}
