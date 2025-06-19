@@ -8,6 +8,13 @@ require('dotenv').config();
 const app = express();
 const prisma = new PrismaClient();
 
+// Log environment variables (without sensitive data)
+console.log('Environment check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- PORT:', process.env.PORT);
+console.log('- DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('- JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -608,10 +615,61 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 
 // Rota de saúde da API
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT
+  });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-}); 
+// Rota de teste simples
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'DroneCore API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+// Initialize server with database check
+async function startServer() {
+  try {
+    console.log('🚀 Starting DroneCore server...');
+    
+    // Test database connection
+    const dbConnected = await testDatabaseConnection();
+    if (!dbConnected) {
+      console.error('❌ Cannot start server without database connection');
+      process.exit(1);
+    }
+    
+    // Start server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Servidor rodando na porta ${PORT}`);
+      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`📊 API base: http://localhost:${PORT}/api`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🛑 Received SIGTERM, shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('🛑 Received SIGINT, shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+// Start the server
+startServer(); 
