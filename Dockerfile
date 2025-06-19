@@ -8,11 +8,14 @@ COPY server/package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy server source code
-COPY server/ .
+# Copy Prisma schema first
+COPY server/prisma ./prisma
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Copy the rest of server source code
+COPY server/ .
 
 # Expose port
 EXPOSE 3001
