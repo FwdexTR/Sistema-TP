@@ -58,9 +58,10 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Rota de saúde da API
+// Rota de saúde da API (simples, sem dependências)
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  console.log('Health check requested');
+  res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
@@ -70,10 +71,27 @@ app.get('/api/health', (req, res) => {
 
 // Rota de teste simples
 app.get('/', (req, res) => {
-  res.json({ 
+  res.status(200).json({ 
     message: 'DroneCore API is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Rota para verificar status do banco
+app.get('/api/db-status', async (req, res) => {
+  try {
+    const dbConnected = await testDatabaseConnection();
+    res.json({ 
+      database: dbConnected ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.json({ 
+      database: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Rotas de Autenticação
@@ -645,25 +663,41 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Initialize server with database check
+// Initialize server with better error handling
 async function startServer() {
   try {
     console.log('🚀 Starting DroneCore server...');
+    console.log(`📋 Port: ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     
     // Start server immediately
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ Servidor rodando na porta ${PORT}`);
       console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
       console.log(`📊 API base: http://localhost:${PORT}/api`);
+      console.log(`🔍 DB status: http://localhost:${PORT}/api/db-status`);
+    });
+    
+    // Handle server errors
+    server.on('error', (error) => {
+      console.error('❌ Server error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error('❌ Port is already in use');
+      }
+      process.exit(1);
     });
     
     // Test database connection in background
     setTimeout(async () => {
-      const dbConnected = await testDatabaseConnection();
-      if (dbConnected) {
-        console.log('✅ Database connection established');
-      } else {
-        console.log('⚠️ Database connection failed, but server is running');
+      try {
+        const dbConnected = await testDatabaseConnection();
+        if (dbConnected) {
+          console.log('✅ Database connection established');
+        } else {
+          console.log('⚠️ Database connection failed, but server is running');
+        }
+      } catch (error) {
+        console.log('⚠️ Database connection error:', error.message);
       }
     }, 2000);
     
@@ -676,14 +710,33 @@ async function startServer() {
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  await prisma.$disconnect();
+  try {
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Error disconnecting from database:', error);
+  }
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
-  await prisma.$disconnect();
+  try {
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Error disconnecting from database:', error);
+  }
   process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
 // Start the server
