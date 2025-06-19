@@ -11,7 +11,13 @@ COPY server/package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy server source code
+# Copy Prisma schema first
+COPY server/prisma ./prisma
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy the rest of server source code
 COPY server/ .
 
 # Expose port (Railway will set PORT environment variable)
