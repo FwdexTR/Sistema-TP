@@ -11,13 +11,7 @@ COPY server/package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy Prisma schema first
-COPY server/prisma ./prisma
-
-# Generate Prisma client
-RUN npx prisma generate
-
-# Copy the rest of server source code
+# Copy server source code
 COPY server/ .
 
 # Expose port (Railway will set PORT environment variable)
@@ -27,5 +21,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:$PORT/api/health || exit 1
 
-# Start the application with better error handling
-CMD ["sh", "-c", "echo 'Starting server on port $PORT' && npm start"] 
+# Start the application
+CMD ["npm", "start"] 
