@@ -20,6 +20,18 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Test database connection
+async function testDatabaseConnection() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connection successful');
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    return false;
+  }
+}
+
 // Middleware de autenticação
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -45,6 +57,42 @@ const requireAdmin = (req, res, next) => {
   }
   next();
 };
+
+// Rota de saúde da API (não depende do banco)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT,
+    database: 'checking...'
+  });
+});
+
+// Rota de teste simples
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'DroneCore API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Rota para verificar status do banco
+app.get('/api/db-status', async (req, res) => {
+  try {
+    const dbConnected = await testDatabaseConnection();
+    res.json({ 
+      database: dbConnected ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.json({ 
+      database: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Rotas de Autenticação
 app.post('/api/auth/login', async (req, res) => {
@@ -613,44 +661,30 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
-// Rota de saúde da API
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    port: process.env.PORT
-  });
-});
-
-// Rota de teste simples
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'DroneCore API is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
 const PORT = process.env.PORT || 3000;
 
-// Initialize server with database check
+// Initialize server without blocking on database
 async function startServer() {
   try {
     console.log('🚀 Starting DroneCore server...');
     
-    // Test database connection
-    const dbConnected = await testDatabaseConnection();
-    if (!dbConnected) {
-      console.error('❌ Cannot start server without database connection');
-      process.exit(1);
-    }
-    
-    // Start server
+    // Start server immediately
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ Servidor rodando na porta ${PORT}`);
       console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
       console.log(`📊 API base: http://localhost:${PORT}/api`);
+      console.log(`🔍 DB status: http://localhost:${PORT}/api/db-status`);
     });
+    
+    // Test database connection in background
+    setTimeout(async () => {
+      const dbConnected = await testDatabaseConnection();
+      if (dbConnected) {
+        console.log('✅ Database connection established');
+      } else {
+        console.log('⚠️ Database connection failed, but server is running');
+      }
+    }, 2000);
     
   } catch (error) {
     console.error('❌ Failed to start server:', error);
