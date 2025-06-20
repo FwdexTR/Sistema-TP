@@ -779,91 +779,18 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
-// Initialize server with better error handling
 async function startServer() {
-  try {
-    console.log('🚀 Starting DroneCore server...');
-    console.log(`📋 Port: ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-    
-    // Start server immediately
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ Servidor rodando na porta ${PORT}`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`📊 API base: http://localhost:${PORT}/api`);
-      console.log(`🔍 DB status: http://localhost:${PORT}/api/db-status`);
-    });
-    
-    // Handle server errors
-    server.on('error', (error) => {
-      console.error('❌ Server error:', error);
-      if (error.code === 'EADDRINUSE') {
-        console.error('❌ Port is already in use');
-      }
-      process.exit(1);
-    });
-    
-    // Test database connection in background
-    setTimeout(async () => {
-      try {
-        if (prisma) {
-          const dbConnected = await testDatabaseConnection();
-          if (dbConnected) {
-            console.log('✅ Database connection established');
-          } else {
-            console.log('⚠️ Database connection failed, but server is running');
-          }
-        } else {
-          console.log('⚠️ Prisma not available, server running without database');
-        }
-      } catch (error) {
-        console.log('⚠️ Database connection error:', error.message);
-      }
-    }, 5000); // Increased timeout to 5 seconds
-    
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
+  const dbConnected = await testDatabaseConnection();
+  
+  if (!dbConnected) {
+    console.error('❌ Server cannot start without a database connection.');
+    // process.exit(1); // Optional: Exit if database is critical
   }
+
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server is running on http://0.0.0.0:${PORT}`);
+  });
 }
 
-// Handle graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  try {
-    if (prisma) {
-      await prisma.$disconnect();
-    }
-  } catch (error) {
-    console.error('Error disconnecting from database:', error);
-  }
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('🛑 Received SIGINT, shutting down gracefully...');
-  try {
-    if (prisma) {
-      await prisma.$disconnect();
-    }
-  } catch (error) {
-    console.error('Error disconnecting from database:', error);
-  }
-  process.exit(0);
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
-
-// Start the server
-startServer(); 
+startServer();
