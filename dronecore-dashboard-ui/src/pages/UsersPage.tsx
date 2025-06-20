@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { getUsers, createUser } from '../services/api';
 
 interface User {
   id: string;
@@ -17,7 +18,6 @@ interface User {
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
@@ -26,55 +26,31 @@ const UsersPage: React.FC = () => {
     role: 'employee' as 'admin' | 'employee',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load users from localStorage on component mount
   useEffect(() => {
-    const savedUsers = localStorage.getItem('tpdrones_users');
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    }
+    setLoading(true);
+    getUsers()
+      .then((data) => setUsers(data))
+      .catch(() => setError('Erro ao buscar usuários do servidor.'))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Save users to localStorage whenever users array changes
-  const saveUsers = (userList: User[]) => {
-    setUsers(userList);
-    localStorage.setItem('tpdrones_users', JSON.stringify(userList));
-  };
-
-  const handleSaveUser = () => {
-    if (selectedUser) {
-      // Update existing user
-      const updatedUsers = users.map(user => 
-        user.id === selectedUser.id 
-          ? { 
-              ...user, 
-              name: formData.name,
-              email: formData.email,
-              role: formData.role,
-              // Only update password if provided
-              ...(formData.password && { password: formData.password })
-            }
-          : user
-      );
-      saveUsers(updatedUsers);
-    } else {
-      // Create new user
-      const newUser: any = {
-        id: `user_${Date.now()}`,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        password: formData.password,
-        active: true,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      const updatedUsers = [...users, newUser];
-      saveUsers(updatedUsers);
+  const handleSaveUser = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newUser = await createUser({ ...formData });
+      setUsers((prev) => [...prev, newUser]);
+      setIsModalOpen(false);
+      setSelectedUser(null);
+      setFormData({ name: '', email: '', role: 'employee', password: '' });
+    } catch (err) {
+      setError('Erro ao criar usuário.');
+    } finally {
+      setLoading(false);
     }
-    
-    setIsModalOpen(false);
-    setSelectedUser(null);
-    setFormData({ name: '', email: '', role: 'employee', password: '' });
   };
 
   const handleEditUser = (user: User) => {
@@ -92,13 +68,13 @@ const UsersPage: React.FC = () => {
     const updatedUsers = users.map(user => 
       user.id === userId ? { ...user, active: !user.active } : user
     );
-    saveUsers(updatedUsers);
+    setUsers(updatedUsers);
   };
 
   const handleDeleteUser = (userId: string) => {
     if (confirm('Tem certeza que deseja excluir este usuário?')) {
       const updatedUsers = users.filter(user => user.id !== userId);
-      saveUsers(updatedUsers);
+      setUsers(updatedUsers);
     }
   };
 

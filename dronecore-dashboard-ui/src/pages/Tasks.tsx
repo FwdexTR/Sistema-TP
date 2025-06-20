@@ -9,6 +9,7 @@ import TaskCalendar from '../components/TaskCalendar';
 import TaskModal, { Task as TaskModalTask } from '../components/TaskModal';
 import ProgressiveTaskExecution from '../components/ProgressiveTaskExecution';
 import { generateServiceReport } from '../utils/professionalReportGenerator';
+import { getTasks, createTask } from '../services/api';
 
 interface User {
   id: string;
@@ -59,24 +60,34 @@ const Tasks: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load tasks from localStorage on component mount
+  // Buscar tarefas do backend
   useEffect(() => {
-    const savedTasks = localStorage.getItem('tpdrones_tasks');
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    }
+    setLoading(true);
+    getTasks()
+      .then((data) => setTasks(data))
+      .catch(() => setError('Erro ao buscar tarefas do servidor.'))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Save tasks to localStorage whenever tasks change
-  useEffect(() => {
-    localStorage.setItem('tpdrones_tasks', JSON.stringify(tasks));
-  }, [tasks]);
+  const handleTaskSave = async (taskData: Omit<TaskModalTask, 'id' | 'createdAt'>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newTask = await createTask({ ...taskData });
+      setTasks((prev) => [...prev, newTask]);
+      setIsTaskModalOpen(false);
+    } catch (err) {
+      setError('Erro ao criar tarefa.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Get users from localStorage to include newly created users
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
 
-  // Load users from localStorage on component mount
   useEffect(() => {
     const savedUsers = localStorage.getItem('tpdrones_users');
     if (savedUsers) {
@@ -91,7 +102,6 @@ const Tasks: React.FC = () => {
     }
   }, []);
 
-  // Get clients from localStorage to include newly created clients
   const [clients, setClients] = useState([]);
 
   useEffect(() => {
@@ -112,16 +122,13 @@ const Tasks: React.FC = () => {
     }
   }, []);
 
-  // Filter tasks - employees see only their assigned tasks
   const filteredTasks = useMemo(() => {
     let result = tasks;
     
-    // If user is employee, only show their tasks
     if (user?.role === 'employee') {
       result = result.filter(task => task.assignee === user.name);
     }
     
-    // Apply search filter
     if (searchTerm) {
       result = result.filter(task => 
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,7 +136,6 @@ const Tasks: React.FC = () => {
       );
     }
     
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(task => task.status === statusFilter);
     }
@@ -137,7 +143,6 @@ const Tasks: React.FC = () => {
     return result;
   }, [tasks, user, searchTerm, statusFilter]);
 
-  // Get tasks for selected date
   const selectedDateTasks = useMemo(() => {
     if (!selectedDate) return [];
     const dateString = selectedDate.toISOString().split('T')[0];
@@ -178,34 +183,6 @@ const Tasks: React.FC = () => {
       case 'low': return 'Baixa';
       default: return priority;
     }
-  };
-
-  const handleTaskSave = (taskData: Omit<TaskModalTask, 'id' | 'createdAt'>) => {
-    if (selectedTask) {
-      // Update existing task
-      const updatedTask: Task = { 
-        ...selectedTask, 
-        ...taskData,
-        createdAt: selectedTask.createdAt
-      };
-      setTasks(prev => prev.map(task => 
-        task.id === selectedTask.id ? updatedTask : task
-      ));
-      updateTaskInHistory(updatedTask);
-    } else {
-      // Create new task
-      const newTask: Task = {
-        id: `task_${Date.now()}`,
-        status: 'pending',
-        completedHectares: 0,
-        progressEntries: [],
-        createdAt: new Date().toISOString().split('T')[0],
-        ...taskData
-      };
-      setTasks(prev => [...prev, newTask]);
-      addTaskToHistory(newTask);
-    }
-    setSelectedTask(null);
   };
 
   const handleStartTask = (taskId: string) => {
@@ -272,7 +249,6 @@ const Tasks: React.FC = () => {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2 font-title">Tarefas</h2>
         <p className="text-gray-600">
@@ -284,7 +260,6 @@ const Tasks: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Calendar Column */}
         <div className="lg:col-span-1">
           <TaskCalendar
             tasks={filteredTasks}
@@ -293,9 +268,7 @@ const Tasks: React.FC = () => {
           />
         </div>
 
-        {/* Tasks Column */}
         <div className="lg:col-span-2">
-          {/* Filters and Search */}
           <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
               <div className="relative">
@@ -337,7 +310,6 @@ const Tasks: React.FC = () => {
             )}
           </div>
 
-          {/* Selected Date Tasks */}
           {selectedDate && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -374,7 +346,6 @@ const Tasks: React.FC = () => {
 
                       <p className="text-gray-600 text-sm mb-4">{task.description}</p>
 
-                      {/* Progress Bar for In-Progress Tasks */}
                       {task.status === 'in-progress' && task.completedHectares !== undefined && (
                         <div className="mb-4">
                           <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -420,7 +391,6 @@ const Tasks: React.FC = () => {
                         </div>
 
                         <div className="flex gap-2">
-                          {/* Download Report Button for completed tasks - Admin only */}
                           {user?.role === 'admin' && isTaskCompleted(task) && (
                             <Button
                               size="sm"
@@ -433,7 +403,6 @@ const Tasks: React.FC = () => {
                             </Button>
                           )}
 
-                          {/* Action buttons for assigned employee or admin */}
                           {canStartOrContinueTask(task) && (
                             <>
                               {task.status === 'pending' && (
@@ -459,7 +428,6 @@ const Tasks: React.FC = () => {
                             </>
                           )}
 
-                          {/* Edit button for admins */}
                           {user?.role === 'admin' && (
                             <Button
                               size="sm"
@@ -483,7 +451,6 @@ const Tasks: React.FC = () => {
         </div>
       </div>
 
-      {/* Modals */}
       <TaskModal
         isOpen={isTaskModalOpen}
         onClose={() => {
@@ -507,7 +474,6 @@ const Tasks: React.FC = () => {
         onComplete={handleCompleteTask}
       />
 
-      {/* Client History Modal */}
       <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { Plus, Edit, Trash2, Battery, Wifi, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { getDrones, createDrone } from '../services/api';
 
 interface Drone {
   id: string;
@@ -19,49 +20,46 @@ interface Drone {
 
 const DronesPage: React.FC = () => {
   const [drones, setDrones] = useState<Drone[]>([]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDrone, setSelectedDrone] = useState<Drone | null>(null);
   const [formData, setFormData] = useState({
+    name: '',
     model: '',
-    serialNumber: '',
-    status: 'available' as Drone['status']
+    serial: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSaveDrone = () => {
-    if (selectedDrone) {
-      // Update existing drone
-      setDrones(prev => prev.map(drone => 
-        drone.id === selectedDrone.id 
-          ? { ...drone, ...formData }
-          : drone
-      ));
-    } else {
-      // Create new drone
-      const newDrone: Drone = {
-        id: `DRN-${String(drones.length + 1).padStart(3, '0')}`,
-        model: formData.model,
-        serialNumber: formData.serialNumber,
-        status: formData.status,
-        batteryLevel: 100,
-        flightHours: 0,
-        lastMaintenance: new Date().toISOString().split('T')[0],
-        nextMaintenance: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      };
-      setDrones(prev => [...prev, newDrone]);
+  useEffect(() => {
+    setLoading(true);
+    getDrones()
+      .then((data) => setDrones(data))
+      .catch(() => setError('Erro ao buscar drones do servidor.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSaveDrone = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newDrone = await createDrone({ ...formData });
+      setDrones((prev) => [...prev, newDrone]);
+      setIsModalOpen(false);
+      setSelectedDrone(null);
+      setFormData({ name: '', model: '', serial: '' });
+    } catch (err) {
+      setError('Erro ao criar drone.');
+    } finally {
+      setLoading(false);
     }
-    
-    setIsModalOpen(false);
-    setSelectedDrone(null);
-    setFormData({ model: '', serialNumber: '', status: 'available' });
   };
 
   const handleEditDrone = (drone: Drone) => {
     setSelectedDrone(drone);
     setFormData({
+      name: drone.model,
       model: drone.model,
-      serialNumber: drone.serialNumber,
-      status: drone.status
+      serial: drone.serialNumber
     });
     setIsModalOpen(true);
   };
@@ -107,7 +105,7 @@ const DronesPage: React.FC = () => {
             <Button 
               onClick={() => {
                 setSelectedDrone(null);
-                setFormData({ model: '', serialNumber: '', status: 'available' });
+                setFormData({ name: '', model: '', serial: '' });
                 setIsModalOpen(true);
               }}
               className="flex items-center gap-2"
@@ -266,8 +264,8 @@ const DronesPage: React.FC = () => {
                   Número de Série
                 </label>
                 <Input
-                  value={formData.serialNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, serialNumber: e.target.value }))}
+                  value={formData.serial}
+                  onChange={(e) => setFormData(prev => ({ ...prev, serial: e.target.value }))}
                   placeholder="Ex: DJI001234"
                   required
                 />

@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { login as apiLogin } from '../services/api';
 
 interface User {
   id: string;
@@ -31,71 +31,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('tpdrones_current_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Carregar usuário da sessão (token) se necessário
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Get all registered users
-    const savedUsers = localStorage.getItem('tpdrones_users');
-    const users = savedUsers ? JSON.parse(savedUsers) : [];
-    
-    // Add default users if no users exist
-    if (users.length === 0) {
-      const defaultUsers = [
-        {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@tpdrones.com',
-          role: 'admin',
-          password: 'admin123',
-          active: true,
-          createdAt: '2024-01-01'
-        },
-        {
-          id: '2',
-          name: 'Tarcísio',
-          email: 'tarcisiodsp08@gmail.com',
-          role: 'admin',
-          password: '040908',
-          active: true,
-          createdAt: '2024-01-01'
-        }
-      ];
-      users.push(...defaultUsers);
-      localStorage.setItem('tpdrones_users', JSON.stringify(users));
-    }
-    
-    // Find user by email and password
-    const foundUser = users.find((u: any) => 
-      u.email === email && u.password === password && u.active
-    );
-    
-    if (foundUser) {
-      const userSession = {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        role: foundUser.role
-      };
-      setUser(userSession);
-      localStorage.setItem('tpdrones_current_user', JSON.stringify(userSession));
+    try {
+      const data = await apiLogin(email, password);
+      setUser(data.user);
+      localStorage.setItem('token', data.token);
       setIsLoading(false);
       return true;
+    } catch (err) {
+      setIsLoading(false);
+      return false;
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('tpdrones_current_user');
+    localStorage.removeItem('token');
   };
 
   const value = {

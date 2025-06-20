@@ -5,6 +5,7 @@ import { Plus, Search, Phone, Mail, MapPin, Building, Edit, Trash2, History } fr
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { getClients, createClient } from '../services/api';
 
 interface Client {
   id: string;
@@ -33,43 +34,33 @@ const Clients: React.FC = () => {
     phone: '',
     address: ''
   });
-
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load and save clients to localStorage
+  // Buscar clientes do backend
   useEffect(() => {
-    const savedClients = localStorage.getItem('tpdrones_clients');
-    if (savedClients) {
-      setClients(JSON.parse(savedClients));
-    }
+    setLoading(true);
+    getClients()
+      .then((data) => setClients(data))
+      .catch(() => setError('Erro ao buscar clientes do servidor.'))
+      .finally(() => setLoading(false));
   }, []);
 
-  const saveClients = (clientList: Client[]) => {
-    setClients(clientList);
-    localStorage.setItem('tpdrones_clients', JSON.stringify(clientList));
+  const handleAddClient = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newClient = await createClient({ ...formData });
+      setClients((prev) => [...prev, newClient]);
+      setIsAddModalOpen(false);
+      setFormData({ name: '', company: '', email: '', phone: '', address: '' });
+    } catch (err) {
+      setError('Erro ao criar cliente.');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  // Check for inactive clients (1 year without service)
-  useEffect(() => {
-    const checkInactiveClients = () => {
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-      
-      const updatedClients = clients.map(client => {
-        const lastMissionDate = new Date(client.lastMission);
-        if (lastMissionDate < oneYearAgo && client.status === 'active') {
-          return { ...client, status: 'inactive' as const };
-        }
-        return client;
-      });
-      
-      if (JSON.stringify(updatedClients) !== JSON.stringify(clients)) {
-        saveClients(updatedClients);
-      }
-    };
-
-    checkInactiveClients();
-  }, [clients]);
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,36 +76,6 @@ const Clients: React.FC = () => {
 
   const getStatusText = (status: string) => {
     return status === 'active' ? 'Ativo' : 'Inativo';
-  };
-
-  const handleAddClient = () => {
-    const newClient: Client = {
-      id: `client_${Date.now()}`,
-      ...formData,
-      status: 'active',
-      totalMissions: 0,
-      lastMission: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    
-    const updatedClients = [...clients, newClient];
-    saveClients(updatedClients);
-    
-    setIsAddModalOpen(false);
-    setFormData({
-      name: '',
-      company: '',
-      email: '',
-      phone: '',
-      address: ''
-    });
-  };
-
-  const handleDeleteClient = (clientId: string) => {
-    if (confirm('Tem certeza que deseja excluir este cliente?')) {
-      const updatedClients = clients.filter(client => client.id !== clientId);
-      saveClients(updatedClients);
-    }
   };
 
   const openClientHistory = (clientName: string) => {
@@ -203,58 +164,30 @@ const Clients: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Mail className="mr-2" size={14} />
-                        {client.email}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="mr-2" size={14} />
-                        {client.phone}
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="flex items-center text-sm text-gray-700"><Phone className="mr-1" size={14} />{client.phone}</span>
+                      <span className="flex items-center text-sm text-gray-700"><Mail className="mr-1" size={14} />{client.email}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="mr-2" size={14} />
-                      {client.address}
-                    </div>
+                    <span className="flex items-center text-sm text-gray-700"><MapPin className="mr-1" size={14} />{client.address}</span>
                   </td>
+                  <td className="px-6 py-4 text-blue-600 font-bold">{client.totalMissions}</td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-gray-900">{client.totalMissions}</span>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(client.status)}`}>{getStatusText(client.status)}</span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(client.status)}`}>
-                      {getStatusText(client.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600">
-                      {new Date(client.lastMission).toLocaleDateString('pt-BR')}
-                    </span>
-                  </td>
+                  <td className="px-6 py-4">{client.lastMission}</td>
                   {user?.role === 'admin' && (
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openClientHistory(client.name)}
-                          className="flex items-center gap-1"
-                        >
-                          <History size={14} />
-                          Histórico
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteClient(client.id)}
-                          className="text-red-600 flex items-center gap-1"
-                        >
-                          <Trash2 size={14} />
-                          Excluir
-                        </Button>
-                      </div>
+                    <td className="px-6 py-4 flex gap-2">
+                      <Button size="icon" variant="ghost" onClick={() => openClientHistory(client.name)} title="Histórico">
+                        <History size={18} />
+                      </Button>
+                      {/* <Button size="icon" variant="ghost" onClick={() => handleEditClient(client.id)} title="Editar">
+                        <Edit size={18} />
+                      </Button> */}
+                      {/* <Button size="icon" variant="ghost" onClick={() => handleDeleteClient(client.id)} title="Excluir">
+                        <Trash2 size={18} />
+                      </Button> */}
                     </td>
                   )}
                 </tr>
@@ -264,123 +197,61 @@ const Clients: React.FC = () => {
         </div>
       </div>
 
-      {filteredClients.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Nenhum cliente encontrado</p>
-        </div>
-      )}
-
       {/* Add Client Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Nome
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Empresa
-              </label>
-              <Input
-                value={formData.company}
-                onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Email
-              </label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Telefone
-              </label>
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Endereço
-              </label>
-              <Input
-                value={formData.address}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsAddModalOpen(false)}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleAddClient} className="flex-1">
-                Adicionar
-              </Button>
-            </div>
+          <div className="flex flex-col gap-4 mt-4">
+            <Input
+              placeholder="Nome"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+            <Input
+              placeholder="Empresa"
+              value={formData.company}
+              onChange={e => setFormData({ ...formData, company: e.target.value })}
+            />
+            <Input
+              placeholder="Email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+            />
+            <Input
+              placeholder="Telefone"
+              value={formData.phone}
+              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+            />
+            <Input
+              placeholder="Endereço"
+              value={formData.address}
+              onChange={e => setFormData({ ...formData, address: e.target.value })}
+            />
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+            <Button onClick={handleAddClient} disabled={loading}>
+              {loading ? 'Salvando...' : 'Salvar'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Client History Modal */}
       <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Histórico de Serviços: {selectedClient}</DialogTitle>
+            <DialogTitle>Histórico de Missões</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {getClientHistory(selectedClient).length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Nenhum histórico encontrado para este cliente</p>
-            ) : (
-              getClientHistory(selectedClient).map((historyTask) => (
-                <div key={historyTask.id} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{historyTask.title}</h4>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      historyTask.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                      historyTask.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {historyTask.status === 'completed' ? 'Concluída' : 
-                       historyTask.status === 'in-progress' ? 'Em Progresso' : 'Pendente'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{historyTask.description}</p>
-                  <div className="grid grid-cols-3 gap-4 text-xs text-gray-500">
-                    <div>Local: {historyTask.location}</div>
-                    <div>Hectares: {historyTask.hectares}</div>
-                    <div>Data: {new Date(historyTask.dueDate).toLocaleDateString('pt-BR')}</div>
-                  </div>
-                </div>
-              ))
+          <div className="mt-4">
+            {selectedClient && (
+              <ul className="list-disc pl-5">
+                {getClientHistory(selectedClient).map((task, idx) => (
+                  <li key={idx} className="mb-2">
+                    <span className="font-semibold">{task.title}</span> - {task.status} - {task.dueDate}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </DialogContent>
