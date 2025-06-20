@@ -2,11 +2,20 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Initialize Prisma with error handling
+let prisma = null;
+try {
+  const { PrismaClient } = require('@prisma/client');
+  prisma = new PrismaClient();
+  console.log('✅ Prisma client initialized successfully');
+} catch (error) {
+  console.error('❌ Failed to initialize Prisma client:', error.message);
+  console.log('⚠️ Server will run without database functionality');
+}
 
 // Log environment variables
 console.log('🚀 Starting DroneCore server...');
@@ -26,6 +35,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Test database connection
 async function testDatabaseConnection() {
+  if (!prisma) {
+    return false;
+  }
   try {
     await prisma.$connect();
     console.log('✅ Database connection successful');
@@ -71,7 +83,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     uptime: process.uptime(),
-    memory: process.memoryUsage()
+    memory: process.memoryUsage(),
+    database: prisma ? 'available' : 'unavailable'
   });
 });
 
@@ -81,13 +94,22 @@ app.get('/', (req, res) => {
   res.status(200).json({ 
     message: 'DroneCore API is running',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    database: prisma ? 'available' : 'unavailable'
   });
 });
 
 // Rota para verificar status do banco
 app.get('/api/db-status', async (req, res) => {
   try {
+    if (!prisma) {
+      return res.json({ 
+        database: 'unavailable',
+        error: 'Prisma client not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     const dbConnected = await testDatabaseConnection();
     res.json({ 
       database: dbConnected ? 'connected' : 'disconnected',
@@ -104,6 +126,10 @@ app.get('/api/db-status', async (req, res) => {
 
 // Rotas de Autenticação
 app.post('/api/auth/login', async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { email, password } = req.body;
 
@@ -143,6 +169,10 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Rotas de Usuários
 app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -163,6 +193,10 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { name, email, password, role } = req.body;
 
@@ -203,6 +237,10 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 
 // Rotas de Clientes
 app.get('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const clients = await prisma.client.findMany({
       orderBy: { createdAt: 'desc' }
@@ -215,6 +253,10 @@ app.get('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 app.post('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { name, email, phone, address } = req.body;
 
@@ -236,6 +278,10 @@ app.post('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { id } = req.params;
     const { name, email, phone, address, status } = req.body;
@@ -254,6 +300,10 @@ app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) =>
 
 // Rotas de Tarefas
 app.get('/api/tasks', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const tasks = await prisma.task.findMany({
       include: {
@@ -284,6 +334,10 @@ app.get('/api/tasks', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/tasks', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const {
       title,
@@ -340,6 +394,10 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -386,6 +444,10 @@ app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
 
 // Rotas de Drones
 app.get('/api/drones', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const drones = await prisma.drone.findMany({
       orderBy: { createdAt: 'desc' }
@@ -398,6 +460,10 @@ app.get('/api/drones', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 app.post('/api/drones', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { model, status } = req.body;
 
@@ -417,6 +483,10 @@ app.post('/api/drones', authenticateToken, requireAdmin, async (req, res) => {
 
 // Rotas de Carros
 app.get('/api/cars', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const cars = await prisma.car.findMany({
       orderBy: { createdAt: 'desc' }
@@ -429,6 +499,10 @@ app.get('/api/cars', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 app.post('/api/cars', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { model, plate, year, status } = req.body;
 
@@ -450,6 +524,10 @@ app.post('/api/cars', authenticateToken, requireAdmin, async (req, res) => {
 
 // Rotas de Entradas Bancárias
 app.get('/api/bank-entries', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const entries = await prisma.bankEntry.findMany({
       orderBy: { date: 'desc' }
@@ -462,6 +540,10 @@ app.get('/api/bank-entries', authenticateToken, requireAdmin, async (req, res) =
 });
 
 app.post('/api/bank-entries', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { description, amount, type, category, date } = req.body;
 
@@ -484,6 +566,10 @@ app.post('/api/bank-entries', authenticateToken, requireAdmin, async (req, res) 
 
 // Rotas de Dívidas de Clientes
 app.get('/api/client-debts', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const debts = await prisma.clientDebt.findMany({
       orderBy: { date: 'desc' }
@@ -496,6 +582,10 @@ app.get('/api/client-debts', authenticateToken, requireAdmin, async (req, res) =
 });
 
 app.post('/api/client-debts', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { clientName, serviceDescription, totalAmount, date, taskId } = req.body;
 
@@ -519,6 +609,10 @@ app.post('/api/client-debts', authenticateToken, requireAdmin, async (req, res) 
 
 // Rotas de Pagamentos de Clientes
 app.get('/api/client-payments', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const payments = await prisma.clientPayment.findMany({
       orderBy: { date: 'desc' }
@@ -531,6 +625,10 @@ app.get('/api/client-payments', authenticateToken, requireAdmin, async (req, res
 });
 
 app.post('/api/client-payments', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { clientName, amount, debtId } = req.body;
 
@@ -570,6 +668,10 @@ app.post('/api/client-payments', authenticateToken, requireAdmin, async (req, re
 
 // Rotas de Imagens
 app.post('/api/images', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { filename, dataUrl, taskId, progressEntryId } = req.body;
 
@@ -591,6 +693,10 @@ app.post('/api/images', authenticateToken, async (req, res) => {
 
 // Rotas de Progresso
 app.post('/api/progress-entries', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const { date, description, taskId, photos } = req.body;
 
@@ -620,6 +726,10 @@ app.post('/api/progress-entries', authenticateToken, async (req, res) => {
 
 // Rota de estatísticas do dashboard
 app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
   try {
     const [
       totalTasks,
@@ -698,11 +808,15 @@ async function startServer() {
     // Test database connection in background
     setTimeout(async () => {
       try {
-        const dbConnected = await testDatabaseConnection();
-        if (dbConnected) {
-          console.log('✅ Database connection established');
+        if (prisma) {
+          const dbConnected = await testDatabaseConnection();
+          if (dbConnected) {
+            console.log('✅ Database connection established');
+          } else {
+            console.log('⚠️ Database connection failed, but server is running');
+          }
         } else {
-          console.log('⚠️ Database connection failed, but server is running');
+          console.log('⚠️ Prisma not available, server running without database');
         }
       } catch (error) {
         console.log('⚠️ Database connection error:', error.message);
@@ -719,7 +833,9 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
   try {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   } catch (error) {
     console.error('Error disconnecting from database:', error);
   }
@@ -729,7 +845,9 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
   try {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   } catch (error) {
     console.error('Error disconnecting from database:', error);
   }
