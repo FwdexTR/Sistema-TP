@@ -947,23 +947,17 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
-async function startServer() {
-  const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
-  // Iniciar o servidor IMEDIATAMENTE para passar na verificação de saúde do Railway
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server is running on http://0.0.0.0:${PORT}`);
-    console.log('🚀 Performing post-start database connection test...');
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server is running on http://0.0.0.0:${PORT}`);
+  console.log('🚀 Performing post-start database connection test...');
 
-    // Testar a conexão com o banco de dados depois que o servidor já iniciou
-    testDatabaseConnection().then(connected => {
-      if (connected) {
-        console.log('✅ Database connection confirmed.');
-      } else {
-        console.error('❌ Database connection failed post-start. The server is running but queries will likely fail.');
-      }
-    });
+  testDatabaseConnection().then(connected => {
+    if (connected) {
+      console.log('✅ Database connection confirmed.');
+    } else {
+      console.error('❌ Database connection failed post-start. The server is running but queries will likely fail.');
+    }
   });
-}
-
-startServer();
+});
