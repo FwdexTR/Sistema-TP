@@ -6,11 +6,13 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:init": "node init-db.js",
     "build": "prisma generate",
-    "vercel-build": "prisma generate"
+    "vercel-build": "prisma generate",
+    "postinstall": "npx prisma generate"
   },
   "keywords": [],
   "author": "",
