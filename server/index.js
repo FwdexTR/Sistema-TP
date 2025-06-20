@@ -65,18 +65,23 @@ const requireAdmin = (req, res, next) => {
 
 // Rota de saúde da API (simples, sem dependências)
 app.get('/api/health', (req, res) => {
+  console.log('🏥 Health check requested');
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
   });
 });
 
 // Rota de teste simples
 app.get('/', (req, res) => {
+  console.log('🏠 Root endpoint requested');
   res.status(200).json({ 
     message: 'DroneCore API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
   });
 });
 
