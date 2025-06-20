@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getClientHistory, createClientHistory } from '../services/api';
 
 interface Task {
   id: string;
@@ -18,8 +18,10 @@ interface Task {
 
 interface ClientHistoryContextType {
   getClientHistory: (clientName: string) => Task[];
-  addTaskToHistory: (task: Task) => void;
+  addTaskToHistory: (task: Task) => Promise<void>;
   updateTaskInHistory: (task: Task) => void;
+  loading: boolean;
+  error: string | null;
 }
 
 const ClientHistoryContext = createContext<ClientHistoryContextType | undefined>(undefined);
@@ -34,29 +36,64 @@ export const useClientHistory = () => {
 
 export const ClientHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [clientHistory, setClientHistory] = useState<{ [clientName: string]: Task[] }>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedHistory = localStorage.getItem('dronecore_client_history');
-    if (savedHistory) {
-      setClientHistory(JSON.parse(savedHistory));
-    }
+    loadClientHistory();
   }, []);
 
-  const saveHistory = (history: { [clientName: string]: Task[] }) => {
-    setClientHistory(history);
-    localStorage.setItem('dronecore_client_history', JSON.stringify(history));
+  const loadClientHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const historyData = await getClientHistory();
+      
+      // Organizar dados por cliente
+      const organizedHistory: { [clientName: string]: Task[] } = {};
+      historyData.forEach((entry: any) => {
+        if (entry.client && entry.task) {
+          const clientName = entry.client.name;
+          if (!organizedHistory[clientName]) {
+            organizedHistory[clientName] = [];
+          }
+          organizedHistory[clientName].push(entry.task);
+        }
+      });
+      
+      setClientHistory(organizedHistory);
+    } catch (err) {
+      setError('Erro ao carregar histórico de clientes');
+      console.error('Erro ao carregar histórico de clientes:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getClientHistory = (clientName: string): Task[] => {
     return clientHistory[clientName] || [];
   };
 
-  const addTaskToHistory = (task: Task) => {
-    const updatedHistory = {
-      ...clientHistory,
-      [task.client]: [...(clientHistory[task.client] || []), task]
-    };
-    saveHistory(updatedHistory);
+  const addTaskToHistory = async (task: Task) => {
+    try {
+      setError(null);
+      await createClientHistory({
+        clientId: task.client, // Assumindo que task.client é o ID do cliente
+        taskId: task.id,
+        action: 'task_created',
+        description: `Tarefa "${task.title}" criada`
+      });
+      
+      const updatedHistory = {
+        ...clientHistory,
+        [task.client]: [...(clientHistory[task.client] || []), task]
+      };
+      setClientHistory(updatedHistory);
+    } catch (err) {
+      setError('Erro ao adicionar tarefa ao histórico');
+      console.error('Erro ao adicionar tarefa ao histórico:', err);
+      throw err;
+    }
   };
 
   const updateTaskInHistory = (task: Task) => {
@@ -67,13 +104,15 @@ export const ClientHistoryProvider: React.FC<{ children: React.ReactNode }> = ({
       ...clientHistory,
       [task.client]: updatedTasks
     };
-    saveHistory(updatedHistory);
+    setClientHistory(updatedHistory);
   };
 
   const value = {
     getClientHistory,
     addTaskToHistory,
     updateTaskInHistory,
+    loading,
+    error
   };
 
   return (

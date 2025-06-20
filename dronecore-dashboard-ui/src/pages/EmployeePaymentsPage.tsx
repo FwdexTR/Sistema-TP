@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { DollarSign, User, FileText, Trash2, Eye, Download } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { getUsers, getTasks, getEmployeeRates, updateTask, deleteEmployeeRate, updateEmployeeRate, createEmployeeRate } from '../services/api';
 import { generateEmployeePaymentReport, generateAggregatedPaymentReport, calculateEmployeeWorkData } from '../utils/professionalReportGenerator';
 
 interface Employee {
@@ -50,44 +50,58 @@ const EmployeePaymentsPage: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    // Load employees from localStorage
-    const savedUsers = localStorage.getItem('tpdrones_users');
-    if (savedUsers) {
-      const users = JSON.parse(savedUsers);
+  const loadData = async () => {
+    try {
+      // Load employees from API
+      const users = await getUsers();
       const employeeList = users.filter((user: any) => user.role === 'employee' && user.active !== false);
       setEmployees(employeeList);
-    }
 
-    // Load tasks from localStorage
-    const savedTasks = localStorage.getItem('tpdrones_tasks');
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    }
+      // Load tasks from API
+      const tasksData = await getTasks();
+      setTasks(tasksData);
 
-    // Load employee rates from localStorage
-    const savedRates = localStorage.getItem('tpdrones_employee_rates');
-    if (savedRates) {
-      setEmployeeRates(JSON.parse(savedRates));
+      // Load employee rates from API
+      const ratesData = await getEmployeeRates();
+      const ratesMap: { [key: string]: number } = {};
+      ratesData.forEach((rate: any) => {
+        ratesMap[rate.userId] = rate.rate;
+      });
+      setEmployeeRates(ratesMap);
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
     }
   };
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (confirm('Tem certeza que deseja limpar todos os dados de pagamentos? Esta ação não pode ser desfeita.')) {
-      // Clear completed tasks
-      const updatedTasks = tasks.map(task => ({
-        ...task,
-        status: 'pending' as const,
-        completedHectares: 0,
-        progressEntries: []
-      }));
-      
-      localStorage.setItem('tpdrones_tasks', JSON.stringify(updatedTasks));
-      setTasks(updatedTasks);
-      
-      // Reset employee rates
-      setEmployeeRates({});
-      localStorage.removeItem('tpdrones_employee_rates');
+      try {
+        // Clear completed tasks
+        const updatedTasks = tasks.map(task => ({
+          ...task,
+          status: 'pending' as const,
+          completedHectares: 0,
+          progressEntries: []
+        }));
+        
+        // Update tasks in database
+        for (const task of updatedTasks) {
+          await updateTask(task.id, task);
+        }
+        
+        setTasks(updatedTasks);
+        
+        // Reset employee rates
+        setEmployeeRates({});
+        
+        // Delete all employee rates from database
+        const ratesData = await getEmployeeRates();
+        for (const rate of ratesData) {
+          await deleteEmployeeRate(rate.id);
+        }
+      } catch (err) {
+        console.error('Erro ao limpar dados:', err);
+      }
     }
   };
 
@@ -104,30 +118,61 @@ const EmployeePaymentsPage: React.FC = () => {
     await generateAggregatedPaymentReport(employees, tasks, employeeRates);
   };
 
-  const handleRateChange = (employeeId: string, rate: number) => {
-    const updatedRates = { ...employeeRates, [employeeId]: rate };
-    setEmployeeRates(updatedRates);
-    localStorage.setItem('tpdrones_employee_rates', JSON.stringify(updatedRates));
+  const handleRateChange = async (employeeId: string, rate: number) => {
+    try {
+      const updatedRates = { ...employeeRates, [employeeId]: rate };
+      setEmployeeRates(updatedRates);
+      
+      // Update or create employee rate in database
+      const existingRate = await getEmployeeRates();
+      const employeeRate = existingRate.find((r: any) => r.userId === employeeId);
+      
+      if (employeeRate) {
+        await updateEmployeeRate(employeeRate.id, { rate });
+      } else {
+        await createEmployeeRate({
+          userId: employeeId,
+          rate,
+          startDate: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar taxa:', err);
+    }
   };
 
-  const handleDeleteEmployeeData = (employeeId: string) => {
+  const handleDeleteEmployeeData = async (employeeId: string) => {
     if (confirm('Tem certeza que deseja excluir todos os dados deste funcionário?')) {
-      // Remove from employee rates
-      const updatedRates = { ...employeeRates };
-      delete updatedRates[employeeId];
-      setEmployeeRates(updatedRates);
-      localStorage.setItem('tpdrones_employee_rates', JSON.stringify(updatedRates));
-      
-      // Clear progress entries for this employee
-      const updatedTasks = tasks.map(task => ({
-        ...task,
-        progressEntries: task.progressEntries?.filter(entry => entry.assignee !== employees.find(e => e.id === employeeId)?.name) || []
-      }));
-      
-      setTasks(updatedTasks);
-      localStorage.setItem('tpdrones_tasks', JSON.stringify(updatedTasks));
-      
-      loadData();
+      try {
+        // Remove from employee rates
+        const updatedRates = { ...employeeRates };
+        delete updatedRates[employeeId];
+        setEmployeeRates(updatedRates);
+        
+        // Delete employee rate from database
+        const ratesData = await getEmployeeRates();
+        const employeeRate = ratesData.find((r: any) => r.userId === employeeId);
+        if (employeeRate) {
+          await deleteEmployeeRate(employeeRate.id);
+        }
+        
+        // Clear progress entries for this employee
+        const employeeName = employees.find(e => e.id === employeeId)?.name;
+        const updatedTasks = tasks.map(task => ({
+          ...task,
+          progressEntries: task.progressEntries?.filter(entry => entry.assignee !== employeeName) || []
+        }));
+        
+        // Update tasks in database
+        for (const task of updatedTasks) {
+          await updateTask(task.id, task);
+        }
+        
+        setTasks(updatedTasks);
+        loadData();
+      } catch (err) {
+        console.error('Erro ao deletar dados do funcionário:', err);
+      }
     }
   };
 

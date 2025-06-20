@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+import { getDrones, getCars } from '../services/api';
 
 export interface Task {
   id: string;
@@ -86,17 +86,20 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [cars, setCars] = useState([]);
 
   useEffect(() => {
-    // Load drones from localStorage
-    const savedDrones = localStorage.getItem('tpdrones_drones');
-    if (savedDrones) {
-      setDrones(JSON.parse(savedDrones));
-    }
+    const loadData = async () => {
+      try {
+        // Load drones from API
+        const dronesData = await getDrones();
+        setDrones(dronesData);
 
-    // Load cars from localStorage
-    const savedCars = localStorage.getItem('tpdrones_cars');
-    if (savedCars) {
-      setCars(JSON.parse(savedCars));
-    }
+        // Load cars from API
+        const carsData = await getCars();
+        setCars(carsData);
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+      }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {

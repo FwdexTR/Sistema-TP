@@ -8,6 +8,7 @@ import { Label } from './ui/label';
 import { Camera, Plus, CheckCircle } from 'lucide-react';
 import { Task } from './TaskModal';
 import { useCars } from '../contexts/CarsContext';
+import { getDrones } from '../services/api';
 
 interface ProgressiveTaskExecutionProps {
   isOpen: boolean;
@@ -32,18 +33,21 @@ const ProgressiveTaskExecution: React.FC<ProgressiveTaskExecutionProps> = ({
   const [selectedCar, setSelectedCar] = useState('');
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // Get drones from localStorage
+  // Get drones from API
   const [drones, setDrones] = useState<string[]>([]);
 
   useEffect(() => {
-    const savedDrones = localStorage.getItem('tpdrones_drones');
-    if (savedDrones) {
-      const droneList = JSON.parse(savedDrones);
-      setDrones(droneList.map((drone: any) => drone.model || drone.name || drone));
-    } else {
-      // No drones available
-      setDrones([]);
-    }
+    const loadDrones = async () => {
+      try {
+        const dronesData = await getDrones();
+        const droneList = dronesData.map((drone: any) => drone.model || drone.name || drone);
+        setDrones(droneList);
+      } catch (err) {
+        console.error('Erro ao carregar drones:', err);
+        setDrones([]);
+      }
+    };
+    loadDrones();
   }, []);
 
   const availableCars = cars ? cars.filter(car => car.status === 'available') : [];

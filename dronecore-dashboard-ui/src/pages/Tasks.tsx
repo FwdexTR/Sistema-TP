@@ -9,7 +9,7 @@ import TaskCalendar from '../components/TaskCalendar';
 import TaskModal, { Task as TaskModalTask } from '../components/TaskModal';
 import ProgressiveTaskExecution from '../components/ProgressiveTaskExecution';
 import { generateServiceReport } from '../utils/professionalReportGenerator';
-import { getTasks, createTask } from '../services/api';
+import { getTasks, createTask, getUsers, getClients } from '../services/api';
 
 interface User {
   id: string;
@@ -89,37 +89,35 @@ const Tasks: React.FC = () => {
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    const savedUsers = localStorage.getItem('tpdrones_users');
-    if (savedUsers) {
-      const users = JSON.parse(savedUsers);
-      const employeeUsers = users.filter((u: User) => u.role === 'employee');
-      setRegisteredUsers(prev => {
-        // Merge with existing users, avoiding duplicates
-        const existingEmails = prev.map(u => u.email);
-        const newUsers = employeeUsers.filter((u: User) => !existingEmails.includes(u.email));
-        return [...prev, ...newUsers];
-      });
-    }
+    const loadUsers = async () => {
+      try {
+        const users = await getUsers();
+        const employeeUsers = users.filter((u: User) => u.role === 'employee');
+        setRegisteredUsers(employeeUsers);
+      } catch (err) {
+        console.error('Erro ao carregar usuários:', err);
+      }
+    };
+    loadUsers();
   }, []);
 
   const [clients, setClients] = useState([]);
 
   useEffect(() => {
-    const savedClients = localStorage.getItem('tpdrones_clients');
-    if (savedClients) {
-      const clientList = JSON.parse(savedClients);
-      const clientOptions = clientList.map((client: any) => ({
-        id: client.id,
-        name: client.name,
-        email: client.email || ''
-      }));
-      setClients(prev => {
-        // Merge with existing clients, avoiding duplicates
-        const existingNames = prev.map(c => c.name);
-        const newClients = clientOptions.filter((c: any) => !existingNames.includes(c.name));
-        return [...prev, ...newClients];
-      });
-    }
+    const loadClients = async () => {
+      try {
+        const clientList = await getClients();
+        const clientOptions = clientList.map((client: any) => ({
+          id: client.id,
+          name: client.name,
+          email: client.email || ''
+        }));
+        setClients(clientOptions);
+      } catch (err) {
+        console.error('Erro ao carregar clientes:', err);
+      }
+    };
+    loadClients();
   }, []);
 
   const filteredTasks = useMemo(() => {

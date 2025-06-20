@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Download, Filter, Calendar, TrendingUp, Users, Plane, CheckCircle, Plus, Trash2, DollarSign } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { DollarSign, TrendingUp, Users, Calendar, Download, Plus, Trash2, Eye, FileText, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { getBankEntries, getClientDebts, getClientPayments, getTasks, createBankEntry, createClientDebt, createClientPayment } from '../services/api';
 
 interface BankEntry {
   id: string;
@@ -57,88 +58,85 @@ const Reports: React.FC = () => {
     debtId: ''
   });
 
-  // Load all data from localStorage
+  // Load all data from API
   useEffect(() => {
-    const savedEntries = localStorage.getItem('tpdrones_bank_entries');
-    if (savedEntries) {
-      setBankEntries(JSON.parse(savedEntries));
-    }
+    const loadData = async () => {
+      try {
+        const [entriesData, debtsData, paymentsData, tasksData] = await Promise.all([
+          getBankEntries(),
+          getClientDebts(),
+          getClientPayments(),
+          getTasks()
+        ]);
 
-    const savedDebts = localStorage.getItem('tpdrones_client_debts');
-    if (savedDebts) {
-      setClientDebts(JSON.parse(savedDebts));
-    }
+        setBankEntries(entriesData);
+        setClientDebts(debtsData);
+        setClientPayments(paymentsData);
 
-    const savedPayments = localStorage.getItem('tpdrones_client_payments');
-    if (savedPayments) {
-      setClientPayments(JSON.parse(savedPayments));
-    }
+        // Create debts from completed tasks
+        const completedTasks = tasksData.filter((task: any) => task.status === 'completed' && task.serviceValue);
+        
+        completedTasks.forEach((task: any) => {
+          const existingDebt = debtsData.find((debt: any) => debt.taskId === task.id);
+          if (!existingDebt && task.serviceValue) {
+            const newDebt: ClientDebt = {
+              id: `debt_${Date.now()}_${task.id}`,
+              clientName: task.client,
+              serviceDescription: task.title,
+              totalAmount: task.serviceValue,
+              paidAmount: 0,
+              remainingAmount: task.serviceValue,
+              date: task.completedAt || task.dueDate,
+              taskId: task.id
+            };
+            setClientDebts(prev => [...prev, newDebt]);
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+      }
+    };
 
-    // Load completed tasks and create debts
-    const savedTasks = localStorage.getItem('tpdrones_tasks');
-    if (savedTasks) {
-      const tasks = JSON.parse(savedTasks);
-      const completedTasks = tasks.filter((task: any) => task.status === 'completed' && task.serviceValue);
-      
-      completedTasks.forEach((task: any) => {
-        const existingDebt = clientDebts.find(debt => debt.taskId === task.id);
-        if (!existingDebt && task.serviceValue) {
-          const newDebt: ClientDebt = {
-            id: `debt_${Date.now()}_${task.id}`,
-            clientName: task.client,
-            serviceDescription: task.title,
-            totalAmount: task.serviceValue,
-            paidAmount: 0,
-            remainingAmount: task.serviceValue,
-            date: task.completedAt || task.dueDate,
-            taskId: task.id
-          };
-          setClientDebts(prev => [...prev, newDebt]);
-        }
-      });
-    }
+    loadData();
   }, []);
 
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('tpdrones_bank_entries', JSON.stringify(bankEntries));
-  }, [bankEntries]);
-
-  useEffect(() => {
-    localStorage.setItem('tpdrones_client_debts', JSON.stringify(clientDebts));
-  }, [clientDebts]);
-
-  useEffect(() => {
-    localStorage.setItem('tpdrones_client_payments', JSON.stringify(clientPayments));
-  }, [clientPayments]);
-
   // Calculate real metrics from tasks and financial data
-  const calculateMetrics = () => {
-    const savedTasks = localStorage.getItem('tpdrones_tasks');
-    const tasks = savedTasks ? JSON.parse(savedTasks) : [];
-    
-    const completedTasks = tasks.filter((task: any) => task.status === 'completed');
-    const totalFlights = completedTasks.length;
-    
-    // Calculate total flight hours (assuming 1 hour per 10 hectares)
-    const totalHectares = completedTasks.reduce((sum: number, task: any) => sum + (task.hectares || 0), 0);
-    const flightHours = totalHectares / 10;
-    
-    // Success rate (completed vs total tasks)
-    const totalTasks = tasks.length;
-    const successRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
-    
-    // Revenue from completed tasks
-    const taskRevenue = completedTasks.reduce((sum: number, task: any) => sum + (task.serviceValue || 0), 0);
-    const paymentRevenue = clientPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const totalRevenue = taskRevenue;
+  const calculateMetrics = async () => {
+    try {
+      const tasksData = await getTasks();
+      const tasks = tasksData || [];
+      
+      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+      const totalFlights = completedTasks.length;
+      
+      // Calculate total flight hours (assuming 1 hour per 10 hectares)
+      const totalHectares = completedTasks.reduce((sum: number, task: any) => sum + (task.hectares || 0), 0);
+      const flightHours = totalHectares / 10;
+      
+      // Success rate (completed vs total tasks)
+      const totalTasks = tasks.length;
+      const successRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
+      
+      // Revenue from completed tasks
+      const taskRevenue = completedTasks.reduce((sum: number, task: any) => sum + (task.serviceValue || 0), 0);
+      const paymentRevenue = clientPayments.reduce((sum, payment) => sum + payment.amount, 0);
+      const totalRevenue = taskRevenue;
 
-    return {
-      totalFlights,
-      flightHours,
-      successRate,
-      revenue: totalRevenue
-    };
+      return {
+        totalFlights,
+        flightHours,
+        successRate,
+        revenue: totalRevenue
+      };
+    } catch (err) {
+      console.error('Erro ao calcular métricas:', err);
+      return {
+        totalFlights: 0,
+        flightHours: 0,
+        successRate: 0,
+        revenue: 0
+      };
+    }
   };
 
   const metrics = calculateMetrics();
@@ -327,7 +325,7 @@ const Reports: React.FC = () => {
                 <p className="text-xs text-gray-600 mt-1">+0% vs mês anterior</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Plane className="text-blue-600" size={24} />
+                <PieChartIcon className="text-blue-600" size={24} />
               </div>
             </div>
           </CardContent>
@@ -357,7 +355,7 @@ const Reports: React.FC = () => {
                 <p className="text-xs text-gray-600 mt-1">+0% vs mês anterior</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="text-green-600" size={24} />
+                <PieChartIcon className="text-green-600" size={24} />
               </div>
             </div>
           </CardContent>

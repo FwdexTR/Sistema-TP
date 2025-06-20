@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getCars, createCar, updateCar as apiUpdateCar } from '../services/api';
 
 interface Car {
   id: string;
@@ -11,10 +12,12 @@ interface Car {
 
 interface CarsContextType {
   cars: Car[];
-  addCar: (car: Omit<Car, 'id' | 'createdAt'>) => void;
-  updateCar: (id: string, car: Partial<Car>) => void;
+  addCar: (car: Omit<Car, 'id' | 'createdAt'>) => Promise<void>;
+  updateCar: (id: string, car: Partial<Car>) => Promise<void>;
   deleteCar: (id: string) => void;
   clearCars: () => void;
+  loading: boolean;
+  error: string | null;
 }
 
 const CarsContext = createContext<CarsContextType | undefined>(undefined);
@@ -29,42 +32,57 @@ export const useCars = () => {
 
 export const CarsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedCars = localStorage.getItem('tpdrones_cars');
-    if (savedCars) {
-      setCars(JSON.parse(savedCars));
-    }
+    loadCars();
   }, []);
 
-  const saveCars = (carList: Car[]) => {
-    setCars(carList);
-    localStorage.setItem('tpdrones_cars', JSON.stringify(carList));
+  const loadCars = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const carsData = await getCars();
+      setCars(carsData);
+    } catch (err) {
+      setError('Erro ao carregar carros');
+      console.error('Erro ao carregar carros:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const addCar = (carData: Omit<Car, 'id' | 'createdAt'>) => {
-    const newCar: Car = {
-      id: `car_${Date.now()}`,
-      ...carData,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    saveCars([...cars, newCar]);
+  const addCar = async (carData: Omit<Car, 'id' | 'createdAt'>) => {
+    try {
+      setError(null);
+      const newCar = await createCar(carData);
+      setCars(prev => [...prev, newCar]);
+    } catch (err) {
+      setError('Erro ao adicionar carro');
+      console.error('Erro ao adicionar carro:', err);
+      throw err;
+    }
   };
 
-  const updateCar = (id: string, carData: Partial<Car>) => {
-    const updatedCars = cars.map(car =>
-      car.id === id ? { ...car, ...carData } : car
-    );
-    saveCars(updatedCars);
+  const updateCar = async (id: string, carData: Partial<Car>) => {
+    try {
+      setError(null);
+      const updatedCar = await apiUpdateCar(id, carData);
+      setCars(prev => prev.map(car => car.id === id ? updatedCar : car));
+    } catch (err) {
+      setError('Erro ao atualizar carro');
+      console.error('Erro ao atualizar carro:', err);
+      throw err;
+    }
   };
 
   const deleteCar = (id: string) => {
-    const updatedCars = cars.filter(car => car.id !== id);
-    saveCars(updatedCars);
+    setCars(prev => prev.filter(car => car.id !== id));
   };
 
   const clearCars = () => {
-    saveCars([]);
+    setCars([]);
   };
 
   const value = {
@@ -72,7 +90,9 @@ export const CarsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addCar,
     updateCar,
     deleteCar,
-    clearCars
+    clearCars,
+    loading,
+    error
   };
 
   return (

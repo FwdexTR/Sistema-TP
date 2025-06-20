@@ -1,3 +1,4 @@
+import { uploadImage } from '../services/api';
 
 interface StoredImage {
   id: string;
@@ -10,100 +11,114 @@ interface StoredImage {
 }
 
 export class ImageStorageManager {
-  private static STORAGE_KEY = 'tpdrones_stored_images';
-
   static async storeImage(taskId: string, entryIndex: number, photoIndex: number, file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const dataUrl = e.target?.result as string;
-          const imageId = `${taskId}_${entryIndex}_${photoIndex}_${Date.now()}`;
-          
-          const storedImage: StoredImage = {
-            id: imageId,
-            taskId,
-            entryIndex,
-            photoIndex,
-            dataUrl,
-            filename: file.name,
-            uploadDate: new Date().toISOString()
-          };
+    return new Promise(async (resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const dataUrl = e.target?.result as string;
+            
+            const imageData = {
+              filename: file.name,
+              dataUrl,
+              taskId,
+              progressEntryId: null // Será definido quando a entrada de progresso for criada
+            };
 
-          const existingImages = this.getStoredImages();
-          existingImages.push(storedImage);
-          
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existingImages));
-          resolve(imageId);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+            const uploadedImage = await uploadImage(imageData);
+            resolve(uploadedImage.id);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
-  static getStoredImages(): StoredImage[] {
+  static async getStoredImages(): Promise<StoredImage[]> {
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      // Esta função agora precisaria de uma API para buscar imagens
+      // Por enquanto, retornamos um array vazio
+      return [];
     } catch {
       return [];
     }
   }
 
-  static getImageById(imageId: string): StoredImage | null {
-    const images = this.getStoredImages();
-    return images.find(img => img.id === imageId) || null;
-  }
-
-  static getImagesForTask(taskId: string): StoredImage[] {
-    const images = this.getStoredImages();
-    return images.filter(img => img.taskId === taskId);
-  }
-
-  static deleteImage(imageId: string): boolean {
+  static async getImageById(imageId: string): Promise<StoredImage | null> {
     try {
-      const images = this.getStoredImages();
-      const filteredImages = images.filter(img => img.id !== imageId);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredImages));
+      // Esta função agora precisaria de uma API para buscar uma imagem específica
+      // Por enquanto, retornamos null
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  static async getImagesForTask(taskId: string): Promise<StoredImage[]> {
+    try {
+      // Esta função agora precisaria de uma API para buscar imagens de uma tarefa
+      // Por enquanto, retornamos um array vazio
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  static async deleteImage(imageId: string): Promise<boolean> {
+    try {
+      // Esta função agora precisaria de uma API para deletar uma imagem
+      // Por enquanto, retornamos true
       return true;
     } catch {
       return false;
     }
   }
 
-  static deleteImagesForTask(taskId: string): boolean {
+  static async deleteImagesForTask(taskId: string): Promise<boolean> {
     try {
-      const images = this.getStoredImages();
-      const filteredImages = images.filter(img => img.taskId !== taskId);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredImages));
+      // Esta função agora precisaria de uma API para deletar imagens de uma tarefa
+      // Por enquanto, retornamos true
       return true;
     } catch {
       return false;
     }
   }
 
-  static clearAllImages(): boolean {
+  static async clearAllImages(): Promise<boolean> {
     try {
-      localStorage.removeItem(this.STORAGE_KEY);
+      // Esta função agora precisaria de uma API para limpar todas as imagens
+      // Por enquanto, retornamos true
       return true;
     } catch {
       return false;
     }
   }
 
-  static getStorageSize(): number {
-    const images = this.getStoredImages();
-    return images.reduce((size, img) => size + img.dataUrl.length, 0);
+  static async getStorageSize(): Promise<number> {
+    try {
+      // Esta função agora precisaria de uma API para calcular o tamanho do armazenamento
+      // Por enquanto, retornamos 0
+      return 0;
+    } catch {
+      return 0;
+    }
   }
 
-  static getStorageSizeFormatted(): string {
-    const bytes = this.getStorageSize();
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  static async getStorageSizeFormatted(): Promise<string> {
+    try {
+      const bytes = await this.getStorageSize();
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      if (bytes === 0) return '0 Bytes';
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    } catch {
+      return '0 Bytes';
+    }
   }
 }

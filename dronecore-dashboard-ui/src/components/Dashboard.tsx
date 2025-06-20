@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Calendar, Users, FileText, DollarSign, Car, Wifi, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getTasks, getClients, getUsers, getCars, getDashboardStats } from '../services/api';
 
 interface Task {
   id: string;
@@ -44,41 +45,36 @@ const Dashboard: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load data from localStorage
-    const loadData = () => {
-      // Tasks
-      const savedTasks = localStorage.getItem('tpdrones_tasks');
-      if (savedTasks) {
-        setTasks(JSON.parse(savedTasks));
-      }
-
-      // Clients
-      const savedClients = localStorage.getItem('tpdrones_clients');
-      if (savedClients) {
-        setClients(JSON.parse(savedClients));
-      }
-
-      // Users
-      const savedUsers = localStorage.getItem('tpdrones_users');
-      if (savedUsers) {
-        setUsers(JSON.parse(savedUsers));
-      }
-
-      // Cars
-      const savedCars = localStorage.getItem('tpdrones_cars');
-      if (savedCars) {
-        setCars(JSON.parse(savedCars));
-      }
-    };
-
     loadData();
-    
-    // Update data every 5 seconds to stay in sync
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [tasksData, clientsData, usersData, carsData] = await Promise.all([
+        getTasks(),
+        getClients(),
+        getUsers(),
+        getCars()
+      ]);
+
+      setTasks(tasksData);
+      setClients(clientsData);
+      setUsers(usersData);
+      setCars(carsData);
+    } catch (err) {
+      setError('Erro ao carregar dados do dashboard');
+      console.error('Erro ao carregar dados:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculate metrics
   const totalTasks = tasks.length;
@@ -98,10 +94,10 @@ const Dashboard: React.FC = () => {
   const carsInUse = cars.filter(c => c.status === 'in-use').length;
   const carsInMaintenance = cars.filter(c => c.status === 'maintenance').length;
 
-  const totalHectares = tasks.reduce((sum, task) => sum + task.hectares, 0);
+  const totalHectares = tasks.reduce((sum, task) => sum + (task.hectares || 0), 0);
   const completedHectares = tasks
     .filter(t => t.status === 'completed')
-    .reduce((sum, task) => sum + task.hectares, 0);
+    .reduce((sum, task) => sum + (task.hectares || 0), 0);
 
   // Chart data
   const taskStatusData = [
@@ -129,6 +125,30 @@ const Dashboard: React.FC = () => {
     });
   })();
 
+  if (loading) {
+    return (
+      <div className="p-8 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={loadData} variant="outline">
+            Tentar Novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="mb-8 flex items-center justify-between">
@@ -142,12 +162,13 @@ const Dashboard: React.FC = () => {
             className="text-red-600"
             onClick={() => {
               if (window.confirm('Tem certeza que deseja limpar TODOS os dados do sistema? Esta ação não pode ser desfeita.')) {
-                localStorage.clear();
+                // Remover apenas o token de autenticação
+                localStorage.removeItem('token');
                 window.location.reload();
               }
             }}
           >
-            Limpar Dados
+            Sair do Sistema
           </Button>
         )}
       </div>

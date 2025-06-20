@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Eye, Edit, Save, X, Calendar, User, MapPin, Camera, FileText, Trash2 } from 'lucide-react';
+import { Eye, Edit, Save, X, Calendar, User, MapPin, Camera, FileText, Trash2, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { getTasks, updateTask } from '../services/api';
 
 interface Task {
   id: string;
@@ -42,15 +42,16 @@ const TaskDataPage: React.FC = () => {
     loadTasks();
   }, []);
 
-  const loadTasks = () => {
-    const savedTasks = localStorage.getItem('tpdrones_tasks');
-    if (savedTasks) {
-      const tasksData = JSON.parse(savedTasks);
+  const loadTasks = async () => {
+    try {
+      const tasksData = await getTasks();
       // Filter tasks that have progress entries
       const tasksWithProgress = tasksData.filter((task: Task) => 
         task.progressEntries && task.progressEntries.length > 0
       );
       setTasks(tasksWithProgress);
+    } catch (err) {
+      console.error('Erro ao carregar tarefas:', err);
     }
   };
 
@@ -62,55 +63,53 @@ const TaskDataPage: React.FC = () => {
     }
   };
 
-  const handleSaveEntry = (taskId: string, entryIndex: number) => {
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId && task.progressEntries) {
-        const updatedEntries = [...task.progressEntries];
-        updatedEntries[entryIndex] = editedEntry;
-        return { ...task, progressEntries: updatedEntries };
-      }
-      return task;
-    });
-
-    setTasks(updatedTasks);
-    
-    // Update all tasks in localStorage, not just the filtered ones
-    const allTasks = JSON.parse(localStorage.getItem('tpdrones_tasks') || '[]');
-    const updatedAllTasks = allTasks.map((task: Task) => {
-      const updatedTask = updatedTasks.find(t => t.id === task.id);
-      return updatedTask || task;
-    });
-    localStorage.setItem('tpdrones_tasks', JSON.stringify(updatedAllTasks));
-    
-    setEditingEntry(null);
-    setEditedEntry({});
-  };
-
-  const handleDeleteEntry = (taskId: string, entryIndex: number) => {
-    if (confirm('Tem certeza que deseja excluir esta entrada? Esta ação não pode ser desfeita.')) {
+  const handleSaveEntry = async (taskId: string, entryIndex: number) => {
+    try {
       const updatedTasks = tasks.map(task => {
         if (task.id === taskId && task.progressEntries) {
-          const updatedEntries = task.progressEntries.filter((_, index) => index !== entryIndex);
+          const updatedEntries = [...task.progressEntries];
+          updatedEntries[entryIndex] = editedEntry;
           return { ...task, progressEntries: updatedEntries };
         }
         return task;
-      }).filter(task => task.progressEntries && task.progressEntries.length > 0);
+      });
 
       setTasks(updatedTasks);
       
-      // Update all tasks in localStorage
-      const allTasks = JSON.parse(localStorage.getItem('tpdrones_tasks') || '[]');
-      const updatedAllTasks = allTasks.map((task: Task) => {
-        const updatedTask = updatedTasks.find(t => t.id === task.id);
-        if (updatedTask) {
-          return updatedTask;
-        } else if (task.id === taskId) {
-          // Remove progress entries for this task
-          return { ...task, progressEntries: [] };
+      // Update task in database
+      const taskToUpdate = updatedTasks.find(t => t.id === taskId);
+      if (taskToUpdate) {
+        await updateTask(taskId, taskToUpdate);
+      }
+      
+      setEditingEntry(null);
+      setEditedEntry({});
+    } catch (err) {
+      console.error('Erro ao salvar entrada:', err);
+    }
+  };
+
+  const handleDeleteEntry = async (taskId: string, entryIndex: number) => {
+    if (confirm('Tem certeza que deseja excluir esta entrada? Esta ação não pode ser desfeita.')) {
+      try {
+        const updatedTasks = tasks.map(task => {
+          if (task.id === taskId && task.progressEntries) {
+            const updatedEntries = task.progressEntries.filter((_, index) => index !== entryIndex);
+            return { ...task, progressEntries: updatedEntries };
+          }
+          return task;
+        }).filter(task => task.progressEntries && task.progressEntries.length > 0);
+
+        setTasks(updatedTasks);
+        
+        // Update task in database
+        const taskToUpdate = updatedTasks.find(t => t.id === taskId);
+        if (taskToUpdate) {
+          await updateTask(taskId, taskToUpdate);
         }
-        return task;
-      });
-      localStorage.setItem('tpdrones_tasks', JSON.stringify(updatedAllTasks));
+      } catch (err) {
+        console.error('Erro ao deletar entrada:', err);
+      }
     }
   };
 

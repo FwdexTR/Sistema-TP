@@ -73,6 +73,11 @@ export const createCar = async (carData: any) => {
   return response.data;
 };
 
+export const updateCar = async (id: string, carData: any) => {
+  const response = await api.put(`/cars/${id}`, carData);
+  return response.data;
+};
+
 // Drones
 export const getDrones = async () => {
   const response = await api.get('/drones');
@@ -120,5 +125,43 @@ export const createClientPayment = async (paymentData: any) => {
 // Images
 export const uploadImage = async (imageData: any) => {
   const response = await api.post('/images', imageData);
+  return response.data;
+};
+
+// Employee Rates
+export const getEmployeeRates = async () => {
+  const response = await api.get('/employee-rates');
+  return response.data;
+};
+
+export const createEmployeeRate = async (rateData: any) => {
+  const response = await api.post('/employee-rates', rateData);
+  return response.data;
+};
+
+export const updateEmployeeRate = async (id: string, rateData: any) => {
+  const response = await api.put(`/employee-rates/${id}`, rateData);
+  return response.data;
+};
+
+export const deleteEmployeeRate = async (id: string) => {
+  const response = await api.delete(`/employee-rates/${id}`);
+  return response.data;
+};
+
+// Client History
+export const getClientHistory = async () => {
+  const response = await api.get('/client-history');
+  return response.data;
+};
+
+export const createClientHistory = async (historyData: any) => {
+  const response = await api.post('/client-history', historyData);
+  return response.data;
+};
+
+// Dashboard Stats
+export const getDashboardStats = async () => {
+  const response = await api.get('/dashboard/stats');
   return response.data;
 }; 

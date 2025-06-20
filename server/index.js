@@ -88,6 +88,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Endpoint simples que retorna apenas um texto
+app.get('/api/teste', (req, res) => {
+  console.log('🧪 Teste endpoint requested');
+  res.status(200).send('Olá! Este é um endpoint de teste do DroneCore API! 🚁');
+});
+
 // Rota de teste simples
 app.get('/', (req, res) => {
   console.log('🏠 Root endpoint requested');
@@ -662,6 +668,168 @@ app.post('/api/client-payments', authenticateToken, requireAdmin, async (req, re
     res.status(201).json(payment);
   } catch (error) {
     console.error('Erro ao criar pagamento:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rotas de Taxas de Funcionários
+app.get('/api/employee-rates', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
+  try {
+    const rates = await prisma.employeeRate.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(rates);
+  } catch (error) {
+    console.error('Erro ao buscar taxas de funcionários:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/employee-rates', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
+  try {
+    const { userId, rate, startDate, endDate } = req.body;
+
+    const employeeRate = await prisma.employeeRate.create({
+      data: {
+        userId,
+        rate: parseFloat(rate),
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    res.status(201).json(employeeRate);
+  } catch (error) {
+    console.error('Erro ao criar taxa de funcionário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+app.put('/api/employee-rates/:id', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
+  try {
+    const { id } = req.params;
+    const { rate, startDate, endDate } = req.body;
+
+    const employeeRate = await prisma.employeeRate.update({
+      where: { id },
+      data: {
+        rate: parseFloat(rate),
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    res.json(employeeRate);
+  } catch (error) {
+    console.error('Erro ao atualizar taxa de funcionário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+app.delete('/api/employee-rates/:id', authenticateToken, requireAdmin, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
+  try {
+    const { id } = req.params;
+
+    await prisma.employeeRate.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Taxa de funcionário removida com sucesso' });
+  } catch (error) {
+    console.error('Erro ao remover taxa de funcionário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rotas de Histórico de Clientes
+app.get('/api/client-history', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
+  try {
+    const history = await prisma.clientHistory.findMany({
+      include: {
+        client: true,
+        task: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(history);
+  } catch (error) {
+    console.error('Erro ao buscar histórico de clientes:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/client-history', authenticateToken, async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+  
+  try {
+    const { clientId, taskId, action, description } = req.body;
+
+    const historyEntry = await prisma.clientHistory.create({
+      data: {
+        clientId,
+        taskId,
+        action,
+        description,
+        date: new Date()
+      },
+      include: {
+        client: true,
+        task: true
+      }
+    });
+
+    res.status(201).json(historyEntry);
+  } catch (error) {
+    console.error('Erro ao criar entrada de histórico:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
