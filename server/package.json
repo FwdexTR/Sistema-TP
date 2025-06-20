@@ -10,9 +10,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:init": "node init-db.js",
-    "build": "prisma generate",
+    "build": "npx prisma generate",
     "vercel-build": "prisma generate",
-    "postinstall": "npx prisma generate"
+    "postinstall": ""
   },
   "keywords": [],
   "author": "",
