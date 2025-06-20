@@ -8,7 +8,7 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-  relationMode = "foreignKeys"
+  relationMode = "prisma"
 }
 
 // Aqui você pode definir seus modelos de dados

@@ -1,73 +1,37 @@
-# Configuração do Frontend no Vercel
+# Guia de Deploy - Frontend na Vercel
 
-## Passo a Passo para Deploy no Vercel
+Este guia detalha os passos para fazer o deploy do frontend (`dronecore-dashboard-ui`) na Vercel.
 
-### 1. Preparação do Projeto
+## 1. Importar o Projeto na Vercel
 
-O projeto já está configurado para o Vercel com:
-- ✅ `vercel.json` configurado
-- ✅ API URL apontando para `https://sistema.tpdrones.com.br/api`
-- ✅ Build command: `npm run build`
-- ✅ Output directory: `dist`
+-   **Framework Preset**: `Vite`
+-   **Root Directory**: `dronecore-dashboard-ui` (Importante: Vercel deve olhar para a subpasta)
+-   **Build & Development Settings**: Mantenha os padrões.
 
-### 2. Deploy no Vercel
+## 2. Configurar Variáveis de Ambiente
 
-#### Opção A: Via GitHub (Recomendado)
+Na Vercel, vá para **Settings -> Environment Variables**. Adicione a seguinte variável:
 
-1. **Acesse o Vercel**: https://vercel.com
-2. **Faça login** com sua conta GitHub
-3. **Clique em "New Project"**
-4. **Importe o repositório**: `FwdexTR/Sistema-TP`
-5. **Configure o projeto**:
-   - **Framework Preset**: Vite
-   - **Root Directory**: `dronecore-dashboard-ui`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-   - **Install Command**: `npm install`
+-   `VITE_API_URL`
+    -   **Valor**: A URL pública do seu backend no Railway (Ex: `https://seu-backend-123.up.railway.app`).
+    -   **Como encontrar**: No seu projeto Railway, clique no serviço do backend. A URL pública estará visível no topo da página. Se não estiver, gere uma em **Settings -> Domains**.
 
-#### Opção B: Via Vercel CLI
+## 3. Fazer o Deploy
 
-```bash
-# Instalar Vercel CLI
-npm i -g vercel
+Clique em **Deploy**. A Vercel irá construir e publicar seu site.
 
-# Navegar para o diretório do frontend
-cd dronecore-dashboard-ui
+## 4. Conectar um Domínio Personalizado (Opcional)
 
-# Deploy
-vercel
-```
+Se você tem um domínio (ex: `sistema.seusite.com.br`), pode conectá-lo na Vercel em **Settings -> Domains**.
 
-### 3. Configuração de Variáveis de Ambiente
+## 5. Pronto!
 
-No Vercel, configure as seguintes variáveis:
+Seu frontend estará no ar, conectado ao backend que está rodando no Railway.
 
-```
-VITE_API_URL=https://sistema.tpdrones.com.br/api
-```
+## Solução de Problemas
 
-### 4. Configuração do Domínio
-
-#### Domínio Personalizado (Opcional)
-
-Se quiser usar um domínio personalizado:
-
-1. **No Vercel**, vá para "Settings" → "Domains"
-2. **Adicione domínio**: `sistema.tpdrones.com.br`
-3. **Configure DNS** no Hostgator:
-   ```
-   Tipo: CNAME
-   Nome: sistema
-   Valor: [URL do Vercel]
-   TTL: 300
-   ```
-
-### 5. Estrutura Final
-
-```
-Frontend: https://[vercel-url].vercel.app
-Backend: https://sistema.tpdrones.com.br/api
-```
+-   **Erros de CORS**: Verifique se a variável `VITE_API_URL` na Vercel está correta e não tem uma `/` no final.
+-   **Falha no Build**: Confirme que o "Root Directory" na Vercel está configurado como `dronecore-dashboard-ui`.
 
 ## Configuração do Banco de Dados (Hostgator)
 

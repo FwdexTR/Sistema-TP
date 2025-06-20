@@ -1,26 +1,45 @@
 # Configuração de Ambiente - DroneCore
 
-## Variáveis de Ambiente Configuradas
+Este documento descreve as variáveis de ambiente necessárias para rodar o projeto.
 
-### Para Railway Deployment:
+## 🚀 Banco de Dados na Nuvem com PlanetScale (Recomendado)
 
-```bash
-NODE_ENV=production
-JWT_SECRET=cc1222b125383dd07b4afc0c74cc05dae54e62728e3d4c4acfdd20c8788e4d6437e8fb730e45821719a92de148de49286ed6f064e2b9f482bba8926e3887ff7e
-DATABASE_URL="mysql://tpdron91_tpdron91:Fwdex10TpDron@tpdrones.com.br:3306/tpdron91_dronecore"
-DOMAIN=sistema.tpdrones.com.br
+Para produção, é altamente recomendado usar um banco de dados na nuvem. Nós preparamos um guia completo para configurar um banco de dados MySQL gratuito no PlanetScale.
+
+**➡️ Siga o guia**: `PLANETSCALE_GUIDE.md`
+
+## ⚙️ Variáveis de Ambiente Essenciais
+
+Você precisará configurar estas variáveis no seu serviço de backend (Railway).
+
+### `DATABASE_URL`
+A URL de conexão do seu banco de dados. Se estiver usando PlanetScale, ela terá este formato:
+```
+mysql://<USUARIO>:<SENHA>@<HOST>/<NOME_DO_BANCO>?sslaccept=strict
 ```
 
-### Para Desenvolvimento Local:
+### `JWT_SECRET`
+Uma chave secreta longa e aleatória para assinar os tokens de autenticação. Você pode gerar uma facilmente em sites como [Online UUID Generator](https://www.uuidgenerator.net/).
 
-Crie um arquivo `.env` na pasta `server/` com:
+### `NODE_ENV`
+Define o ambiente. Deve ser `production` para o deploy.
 
-```bash
-JWT_SECRET=cc1222b125383dd07b4afc0c74cc05dae54e62728e3d4c4acfdd20c8788e4d6437e8fb730e45821719a92de148de49286ed6f064e2b9f482bba8926e3887ff7e
-DATABASE_URL="mysql://tpdron91_tpdron91:Fwdex10TpDron@tpdrones.com.br:3306/tpdron91_dronecore"
-NODE_ENV=development
-DOMAIN=sistema.tpdrones.com.br
-```
+---
+
+## 🔐 Credenciais de Acesso Padrão
+
+Após popular o banco de dados com `npx prisma db push` e `node init-db.js`, as credenciais padrão são:
+
+-   **Email**: `admin@dronecore.com`
+-   **Senha**: `admin123`
+
+## 📋 Exemplo de Configuração no Railway
+
+Na aba "Variables" do seu serviço no Railway, adicione:
+
+-   **`DATABASE_URL`**: `mysql://...` (a URL do seu PlanetScale)
+-   **`JWT_SECRET`**: `a_chave_secreta_que_voce_gerou`
+-   **`NODE_ENV`**: `production`
 
 ## Configuração do Banco de Dados (Hostgator)
 

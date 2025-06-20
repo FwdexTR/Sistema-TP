@@ -1,9 +1,0 @@
-dronecore-dashboard-ui/
-docker-compose.yml
-deploy.sh
-DEPLOY_GUIDE.md
-QUICK_START.md
-README.md
-.gitignore
-railway.json
-railway.toml 
