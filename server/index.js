@@ -1,3 +1,5 @@
+console.log('--- Servidor Node.js iniciando... ---');
+
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -947,6 +949,8 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
+console.log('--- Configuração de rotas concluída. ---');
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, '0.0.0.0', () => {
@@ -961,3 +965,5 @@ app.listen(PORT, '0.0.0.0', () => {
     }
   });
 });
+
+console.log(`--- Servidor configurado para escutar na porta ${PORT}. O processo continuará ativo. ---`);
