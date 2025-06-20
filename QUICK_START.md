@@ -1,54 +1,69 @@
-# 🚀 DroneCore - Início Rápido
+# 🚀 DroneCore - Guia Rápido de Deploy (Nuvem)
 
-Este guia te ajudará a colocar o DroneCore no ar em menos de 30 minutos!
+Este guia explica como fazer o deploy completo do DroneCore, com o backend no **Railway** e o frontend no **Vercel**.
 
-## ⚡ Deploy Super Rápido (3 Passos)
+## ✨ Stack de Produção
 
-### 1. 🗄️ Configure o Banco de Dados
+-   **Backend**: Node.js + Express + Prisma (deploy no Railway)
+-   **Frontend**: React + Vite (deploy no Vercel)
+-   **Banco de Dados**: MySQL (serviço do Railway)
 
-**Opção A: PlanetScale (Recomendado - Gratuito)**
-1. Acesse [planetscale.com](https://planetscale.com)
-2. Crie conta gratuita
-3. Crie um novo banco
-4. Copie a string de conexão
+---
 
-**Opção B: Hostgator**
-1. Acesse o painel da Hostgator
-2. Vá em "Bancos de Dados" > "MySQL Databases"
-3. Crie banco `dronecore`
-4. Crie usuário e associe ao banco
-5. String: `mysql://usuario:senha@localhost:3306/seu_usuario_dronecore`
+##  Passo 1: Deploy do Backend (Railway)
 
-### 2. 🚀 Deploy Backend (Railway)
+1.  **Crie um Projeto no Railway**
+    -   Acesse [railway.app](https://railway.app) e faça login com sua conta do GitHub.
+    -   Clique em **"New Project"** -> **"Deploy from GitHub repo"**.
+    -   Selecione o seu repositório do DroneCore. O Railway irá detectar o `Dockerfile` na raiz e configurar o serviço automaticamente.
 
-1. Acesse [railway.app](https://railway.app)
-2. Faça login com GitHub
-3. Clique "New Project" > "Deploy from GitHub repo"
-4. Selecione seu repositório
-5. Configure variáveis:
-   - `DATABASE_URL`: Sua string de conexão
-   - `JWT_SECRET`: `sua-chave-seuper-segura-123`
-   - `NODE_ENV`: `production`
+2.  **Adicione um Banco de Dados MySQL**
+    -   Dentro do projeto no Railway, clique em **"+ New"** -> **"Database"** -> **"MySQL"**.
+    -   Isso criará um serviço de banco de dados que se conecta automaticamente ao seu backend.
 
-### 3. 🌐 Deploy Frontend (Vercel)
+3.  **Configure as Variáveis de Ambiente**
+    -   Vá para o serviço do seu backend (não o do banco de dados) e clique em **"Variables"**.
+    -   Adicione as seguintes variáveis:
+        -   `DATABASE_URL`: Clique em "Add a Variable Reference" e selecione `MySQL.DATABASE_URL`. O Railway preencherá o valor automaticamente.
+        -   `JWT_SECRET`: Gere uma chave secreta forte (ex: use um gerador de senhas online) e cole aqui.
+        -   `NODE_ENV`: Defina como `production`.
 
-1. Acesse [vercel.com](https://vercel.com)
-2. Faça login com GitHub
-3. Clique "New Project"
-4. Selecione seu repositório
-5. Configure:
-   - Framework: Vite
-   - Root Directory: `dronecore-dashboard-ui`
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-6. Adicione variável:
-   - `VITE_API_URL`: URL do seu backend (ex: `https://seu-backend.railway.app/api`)
+4.  **Verifique o Deploy**
+    -   O Railway irá fazer o deploy automaticamente.
+    -   Acesse a URL pública gerada (ex: `https://seu-backend.up.railway.app`) para confirmar que está no ar.
+
+---
+
+## Passo 2: Deploy do Frontend (Vercel)
+
+1.  **Crie um Projeto no Vercel**
+    -   Acesse [vercel.com](https://vercel.com) e faça login com sua conta do GitHub.
+    -   Clique em **"Add New..."** -> **"Project"**.
+    -   Selecione o seu repositório do DroneCore.
+
+2.  **Configure o Projeto**
+    -   **Framework Preset**: A Vercel deve detectar `Vite` automaticamente.
+    -   **Root Directory**: **Importante!** Altere para `dronecore-dashboard-ui`.
+    -   Deixe as outras configurações como padrão.
+
+3.  **Adicione a Variável de Ambiente**
+    -   Expanda a seção **"Environment Variables"**.
+    -   Adicione a seguinte variável:
+        -   `VITE_API_URL`: Cole a URL pública do seu backend no Railway (ex: `https://seu-backend.up.railway.app`). **Não** adicione `/api` no final.
+
+4.  **Faça o Deploy**
+    -   Clique em **"Deploy"**. A Vercel irá construir e publicar seu site.
+
+---
 
 ## 🎉 Pronto!
 
-Acesse a URL do Vercel e faça login com:
-- **Email**: `admin@dronecore.com`
-- **Senha**: `admin123`
+Seu sistema está totalmente no ar.
+
+-   **URL do Frontend**: Fornecida pelo Vercel.
+-   **Credenciais de Admin Padrão**:
+    -   **Email**: `admin@dronecore.com`
+    -   **Senha**: `admin123`
 
 ## 🔧 Desenvolvimento Local
 
