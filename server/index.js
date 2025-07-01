@@ -132,45 +132,27 @@ app.get('/api/db-status', async (req, res) => {
 
 // Rotas de Autenticação
 app.post('/api/auth/login', async (req, res) => {
-  if (!prisma) {
-    return res.status(503).json({ error: 'Database unavailable' });
-  }
-  
-  try {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (!user || !user.active) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
-
+  // Login fixo
+  if (email === 'tarcisiodsp08@gmail.com' && password === '040908') {
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: 'fixed-user-id', email, role: 'ADMIN' },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
-
-    res.json({
+    return res.json({
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+        id: 'fixed-user-id',
+        name: 'Tarcisio',
+        email,
+        role: 'ADMIN'
       }
     });
-  } catch (error) {
-    console.error('Erro no login:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
   }
+
+  return res.status(401).json({ error: 'Credenciais inválidas' });
 });
 
 // Rotas de Usuários
