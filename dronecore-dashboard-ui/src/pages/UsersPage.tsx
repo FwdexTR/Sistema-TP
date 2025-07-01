@@ -31,11 +31,30 @@ const UsersPage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    getUsers()
-      .then((data) => setUsers(data))
-      .catch(() => setError('Erro ao buscar usuários do servidor.'))
-      .finally(() => setLoading(false));
+    const localUsers = localStorage.getItem('users');
+    if (localUsers) {
+      setUsers(JSON.parse(localUsers));
+      setLoading(false);
+      getUsers()
+        .then((data) => {
+          setUsers(data);
+          localStorage.setItem('users', JSON.stringify(data));
+        })
+        .catch(() => setError('Erro ao buscar usuários do servidor.'));
+    } else {
+      getUsers()
+        .then((data) => {
+          setUsers(data);
+          localStorage.setItem('users', JSON.stringify(data));
+        })
+        .catch(() => setError('Erro ao buscar usuários do servidor.'))
+        .finally(() => setLoading(false));
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(users));
+  }, [users]);
 
   const handleSaveUser = async () => {
     setLoading(true);

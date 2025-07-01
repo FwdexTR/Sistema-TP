@@ -32,11 +32,30 @@ const DronesPage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    getDrones()
-      .then((data) => setDrones(data))
-      .catch(() => setError('Erro ao buscar drones do servidor.'))
-      .finally(() => setLoading(false));
+    const localDrones = localStorage.getItem('drones');
+    if (localDrones) {
+      setDrones(JSON.parse(localDrones));
+      setLoading(false);
+      getDrones()
+        .then((data) => {
+          setDrones(data);
+          localStorage.setItem('drones', JSON.stringify(data));
+        })
+        .catch(() => setError('Erro ao buscar drones do servidor.'));
+    } else {
+      getDrones()
+        .then((data) => {
+          setDrones(data);
+          localStorage.setItem('drones', JSON.stringify(data));
+        })
+        .catch(() => setError('Erro ao buscar drones do servidor.'))
+        .finally(() => setLoading(false));
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('drones', JSON.stringify(drones));
+  }, [drones]);
 
   const handleSaveDrone = async () => {
     setLoading(true);

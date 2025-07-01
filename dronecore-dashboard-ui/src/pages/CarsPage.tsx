@@ -18,11 +18,30 @@ const CarsPage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    getCars()
-      .then((data) => setCars(data))
-      .catch(() => setError('Erro ao buscar carros do servidor.'))
-      .finally(() => setLoading(false));
+    const localCars = localStorage.getItem('cars');
+    if (localCars) {
+      setCars(JSON.parse(localCars));
+      setLoading(false);
+      getCars()
+        .then((data) => {
+          setCars(data);
+          localStorage.setItem('cars', JSON.stringify(data));
+        })
+        .catch(() => setError('Erro ao buscar carros do servidor.'));
+    } else {
+      getCars()
+        .then((data) => {
+          setCars(data);
+          localStorage.setItem('cars', JSON.stringify(data));
+        })
+        .catch(() => setError('Erro ao buscar carros do servidor.'))
+        .finally(() => setLoading(false));
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('cars', JSON.stringify(cars));
+  }, [cars]);
 
   const handleSaveCar = async () => {
     setLoading(true);

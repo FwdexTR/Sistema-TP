@@ -1,5 +1,3 @@
-console.log('--- Servidor Node.js iniciando... ---');
-
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -473,12 +471,25 @@ app.post('/api/drones', authenticateToken, requireAdmin, async (req, res) => {
   }
   
   try {
-    const { model, status } = req.body;
+    const {
+      model,
+      status,
+      serialNumber,
+      batteryLevel,
+      flightHours,
+      lastMaintenance,
+      nextMaintenance
+    } = req.body;
 
     const drone = await prisma.drone.create({
       data: {
         model,
-        status: status || 'available'
+        status: status || 'available',
+        serialNumber,
+        batteryLevel: batteryLevel !== undefined ? batteryLevel : 100,
+        flightHours: flightHours !== undefined ? flightHours : 0,
+        lastMaintenance: lastMaintenance ? new Date(lastMaintenance) : new Date(),
+        nextMaintenance: nextMaintenance ? new Date(nextMaintenance) : new Date(),
       }
     });
 
